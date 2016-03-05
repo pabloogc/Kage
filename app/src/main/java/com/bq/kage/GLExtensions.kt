@@ -1,73 +1,169 @@
 package com.bq.kage
 
 import android.content.Context
-import android.opengl.GLES20
-import android.opengl.GLES20.GL_VERTEX_SHADER
-import android.opengl.GLES20.GL_FRAGMENT_SHADER
+import android.opengl.GLES20.*
+import android.opengl.GLU
 import android.support.annotation.IntDef
 import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.FloatBuffer
+import java.nio.IntBuffer
+import java.util.*
 
 @IntDef(GL_VERTEX_SHADER.toLong(), GL_FRAGMENT_SHADER.toLong())
 @Retention(AnnotationRetention.SOURCE)
 annotation class ShaderType;
 
 public data class Shader(val shader: Int) {
-  companion object {
-    fun fromAsset(@ShaderType type: Int, context: Context, file: String): Shader {
-      val stream = context.assets.open(file)
-      val outStream = ByteArrayOutputStream()
-      val buffer = ByteArray(1024)
-      var length = stream.read(buffer);
+    companion object {
+        fun fromAsset(file: String, context: Context, @ShaderType type: Int): Shader {
+            val stream = context.assets.open(file)
+            val outStream = ByteArrayOutputStream()
+            val buffer = ByteArray(1024)
+            var length = stream.read(buffer);
 
-      while (length != -1) {
-        outStream.write(buffer, 0, length);
-        length = stream.read(buffer);
-      }
-      return fromString(type, outStream.toString("UTF-8"))
-    }
+            while (length != -1) {
+                outStream.write(buffer, 0, length);
+                length = stream.read(buffer);
+            }
+            return fromString(type, outStream.toString("UTF-8"))
+        }
 
-    fun fromString(@ShaderType type: Int, source: String): Shader {
-      val shader = GLES20.glCreateShader(type)
-      GLES20.glShaderSource(shader, source)
-      GLES20.glCompileShader(shader)
-      return Shader(shader)
+        fun fromString(@ShaderType type: Int, source: String): Shader {
+            val shader = glCreateShader(type).glCheck()
+            glShaderSource(shader, source).glCheck()
+            glCompileShader(shader).glCheck()
+            return Shader(shader)
+        }
     }
-  }
 }
 
 public data class Program(
-    val program: Int,
-    val vertexShader: Shader,
-    val fragmentShader: Shader
+        val program: Int,
+        val shaders: List<Shader>
 ) {
-  fun use() {
-    GLES20.glUseProgram(program)
-  }
 
-  fun getAtribute(string: String) {
+    fun enable() {
+        glUseProgram(program)
+    }
 
-  }
+    fun getAttribAndEnable(name: String): Int {
+        val attr = glGetAttribLocation(program, name)
+        glEnableVertexAttribArray(attr).glCheck()
+        return attr
+    }
+
+    fun disableAttrib(attr: Int) {
+        glDisableVertexAttribArray(attr).glCheck()
+    }
+
+    fun getAttribLocation(name: String): Int = glGetAttribLocation(program, name)
+
+    fun disable() {
+        glCheckException()
+    }
 }
 
 fun program(init: ProgramBuilder.() -> Unit): Program {
-  val builder = ProgramBuilder()
-  builder.init()
-  val program = GLES20.glCreateProgram()
-  GLES20.glAttachShader(program, builder.vertexShader.shader)
-  GLES20.glAttachShader(program, builder.fragmentShader.shader)
-  GLES20.glLinkProgram(program)
-  return Program(program, builder.vertexShader, builder.fragmentShader)
+    val builder = ProgramBuilder()
+    builder.init()
+    val program = glCreateProgram().glCheck()
+
+    for (shaderBuilder in builder.shaders) {
+        glAttachShader(program, shaderBuilder.shader.shader).glCheck()
+    }
+
+    for (shaderBuilder in builder.shaders) {
+        shaderBuilder.bindAttrs(program).glCheck()
+    }
+
+    glLinkProgram(program).glCheck()
+
+    return Program(program, builder.shaders.map { it.shader })
 }
 
 public class ProgramBuilder {
-  lateinit var vertexShader: Shader   private set
-  lateinit var fragmentShader: Shader   private set
+    val shaders: ArrayList<ShaderBuilder> = ArrayList()
 
-  fun vertexShader(shader: Shader) {
-    vertexShader = shader
-  }
+    fun shader(init: ShaderBuilder.() -> Unit) {
+        val builder = ShaderBuilder()
+        builder.init()
+        shaders.add(builder)
+    }
+}
 
-  fun fragmentShader(shader: Shader) {
-    fragmentShader = shader
-  }
+public class ShaderBuilder {
+    lateinit var shader: Shader
+    var type: Int = 0
+    private val attrs = ArrayList<String>()
+    private val attrsIds = ArrayList<Int>()
+
+    public fun asset(context: Context, file: String, @ShaderType type: Int) {
+        shader = Shader.fromAsset(file, context, type)
+    }
+
+    public fun load(f: () -> Shader) {
+        this.shader = f()
+    }
+
+    public fun type(type: Int) {
+        this.type = type
+    }
+
+    public fun attr(name: String, identifier: Int) {
+        this.attrsIds.add(identifier)
+        this.attrs.add(name)
+    }
+
+    fun bindAttrs(program: Int) {
+        for (i in 0..attrs.size - 1) {
+            glCheck {
+                glBindAttribLocation(program, attrsIds[i], attrs[i]).glCheck()
+            }
+        }
+    }
+
+}
+
+//Buffer utilities
+
+
+fun FloatArray.toBuffer(): FloatBuffer {
+    val out = ByteBuffer
+            .allocateDirect(this.size * 4)
+            .order(ByteOrder.nativeOrder())
+            .asFloatBuffer()
+    out.put(this)
+    out.position(0)
+    return out
+}
+
+fun IntArray.toBuffer(): IntBuffer {
+    val out = ByteBuffer
+            .allocateDirect(this.size * 4)
+            .order(ByteOrder.nativeOrder())
+            .asIntBuffer()
+    out.put(this)
+    out.position(0)
+    return out
+}
+
+//Error checking
+
+public fun glCheckException() {
+    val error = glGetError()
+    if (error != GL_NO_ERROR) {
+        throw IllegalStateException("OpenGL error: ${GLU.gluErrorString(error)}")
+    }
+}
+
+fun <T> T.glCheck(): T {
+    glCheckException()
+    return this
+}
+
+inline fun glCheck(f: () -> Unit) {
+    f()
+    glCheckException()
 }

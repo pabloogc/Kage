@@ -1,99 +1,157 @@
 package com.bq.kage
 
 import android.content.Context
-import android.opengl.GLES20
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
+import android.opengl.GLES20.*
 import java.nio.FloatBuffer
-import java.nio.ShortBuffer
+import java.nio.IntBuffer
+
+const val POSITION_ATTR = 1
+const val COLOR_ATTR = 2
 
 const val COORDS_PER_VERTEX = 3
 const val FLOAT_BYTE_COUNT = 4
 const val VERTEX_STRIDE = COORDS_PER_VERTEX * FLOAT_BYTE_COUNT
 
-const val GRID_ROWS = 1
-const val GRID_COLUMNS = 1
+const val GRID_ROWS = 12
+const val GRID_COLUMNS = 12
 
 class Page(context: Context) {
 
-  private val program: Program
+    private val program: Program
 
-  private val vertexBuffer: FloatBuffer
-  private val drawOrderBuffer: ShortBuffer
+    private val vertexPosition: FloatArray
+    private val vertexPositionBuffer: FloatBuffer
+
+    private val vertexColor: FloatArray
+    private val vertexColorBuffer: FloatBuffer
+
+    private val gridDrawOrder: IntArray
+    private val gridDrawOrderBuffer: IntBuffer
+
+    private val buffers = IntArray(2)
 
 
-  private val gridCoords: FloatArray
-  private val gridDrawOrder: ShortArray
+    init {
+        vertexPosition = calculateVertexPositions()
+        vertexPositionBuffer = vertexPosition.toBuffer()
 
-  init {
-    gridCoords = createGrid()
-    gridDrawOrder = createGridDrawOrder()
+        vertexColor = calculateVertexColor()
+        vertexColorBuffer = vertexColor.toBuffer()
 
-    var bb = ByteBuffer.allocateDirect(
-        gridCoords.size * 4 /*4 bytes per float*/);
+        gridDrawOrder = calculateVertexDrawOrder()
+        gridDrawOrderBuffer = gridDrawOrder.toBuffer()
 
-    // use the device hardware's native byte order
-    bb.order(ByteOrder.nativeOrder());
-
-    // create a floating point buffer from the ByteBuffer
-    vertexBuffer = bb.asFloatBuffer();
-    vertexBuffer.put(gridCoords);
-    vertexBuffer.position(0);
-
-    bb = ByteBuffer.allocateDirect(gridDrawOrder.size * 2)
-    bb.order(ByteOrder.nativeOrder())
-    drawOrderBuffer = bb.asShortBuffer()
-    drawOrderBuffer.put(gridDrawOrder)
-    drawOrderBuffer.position(0)
-
-    program = program {
-      vertexShader(Shader.fromAsset(GLES20.GL_VERTEX_SHADER, context, "vertex_shader.vert"))
-      fragmentShader(Shader.fromAsset(GLES20.GL_FRAGMENT_SHADER, context, "fragment_shader.frag"))
+        program = program {
+            shader {
+                attr("position", POSITION_ATTR)
+                attr("color", COLOR_ATTR)
+                asset(context, "vertex_shader.vert", GL_VERTEX_SHADER)
+            }
+            shader {
+                asset(context, "fragment_shader.frag", GL_FRAGMENT_SHADER)
+            }
+        }
     }
-  }
 
-  fun draw() {
-    program.use()
-    // get handle to vertex shader's vPosition member
-    val positionHandle = GLES20.glGetAttribLocation(program.program, "vPosition");
+    fun draw() {
+        program.enable()
 
-    // Enable a handle to the triangle vertices
-    GLES20.glEnableVertexAttribArray(positionHandle);
+        // get handle to vertex shader's vPosition member
 
-    // Prepare the triangle coordinate data
+        glEnableVertexAttribArray(COLOR_ATTR).glCheck()
+        glVertexAttribPointer(COLOR_ATTR,
+                4, GL_FLOAT, false,
+                4 * 4, vertexColorBuffer)
 
 
-    // get handle to fragment shader's vColor member
-    val mColorHandle = GLES20.glGetUniformLocation(program.program, "vColor");
+        glEnableVertexAttribArray(POSITION_ATTR).glCheck()
+        glVertexAttribPointer(POSITION_ATTR,
+                3, GL_FLOAT, false,
+                4 * 3, vertexPositionBuffer);
 
-    // Set color for drawing the triangle
-    GLES20.glUniform4fv(mColorHandle, 1, floatArrayOf(1f, 1f, 1f, 1f), 0);
+        //Draw the geometric data using the draw order
+        glDrawElements(GL_POINTS,
+                gridDrawOrder.size,
+                GL_UNSIGNED_INT,
+                gridDrawOrderBuffer);
 
-    //Load geometric data
-    GLES20.glVertexAttribPointer(positionHandle, COORDS_PER_VERTEX,
-        GLES20.GL_FLOAT, false,
-        VERTEX_STRIDE, vertexBuffer);
 
-    //Draw the geometric data using the draw order
-    GLES20.glDrawElements(GLES20.GL_LINES,
-        gridDrawOrder.size,
-        GLES20.GL_UNSIGNED_SHORT,
-        drawOrderBuffer);
+        program.disableAttrib(POSITION_ATTR)
+        program.disableAttrib(COLOR_ATTR)
 
-    // Disable vertex array
-    GLES20.glDisableVertexAttribArray(positionHandle);
-  }
+        program.disable()
+    }
 
-  private fun createGrid(): FloatArray {
-    return floatArrayOf(
-        -0.5f, 0.5f, 0.0f, // top left
-        -0.5f, -0.5f, 0.0f, // bottom left
-        0.5f, -0.5f, 0.0f, // bottom right
-        0.5f, 0.5f, 0.0f) ; // top right)
-  }
 
-  private fun createGridDrawOrder(): ShortArray {
-    return shortArrayOf(0, 1, 2, 0, 2, 3)
-  }
+    private fun calculateVertexPositions(): FloatArray {
+        val w = 2f / (GRID_COLUMNS - 1)
+        val h = 2f / (GRID_ROWS - 1)
+        val g = FloatArray(3 * GRID_ROWS * GRID_COLUMNS)
+        for (i in 0..GRID_ROWS - 1) {
+            for (j in 0..GRID_COLUMNS - 1) {
+                val p = 3 * (i * GRID_COLUMNS + j)
+                g[p] = -1f + j * w//x
+                g[p + 1] = 1f - i * h //y
+                g[p + 2] = 0f //z
+            }
+        }
+        return g
+    }
 
+    private fun calculateVertexColor(): FloatArray {
+        val colors = FloatArray(4 * GRID_ROWS * GRID_COLUMNS)
+        for (i in 0..GRID_ROWS - 1) {
+            for (j in 0..GRID_COLUMNS - 1) {
+                val p = 4 * (i * GRID_COLUMNS + j)
+
+                var r = 0f
+                var g = 0f
+                var b = 0f
+
+                if (i % 2 == 0) {
+                    r = 1f;
+                } else {
+                    g = 1f
+                }
+
+                if (j % 2 == 0) {
+                    b = 1f
+                } else {
+                    r = 1f
+                    b = 1f
+                }
+
+                colors[0] = 1f
+                colors[1] = 1f
+                colors[2] = 1f
+                colors[3] = 1f //alpha
+            }
+        }
+        return colors
+    }
+
+    private fun calculateVertexDrawOrder(): IntArray {
+        val squares = (GRID_ROWS - 1) * (GRID_COLUMNS - 1)
+        val o = kotlin.IntArray(squares * 6) //3 per triangle in the square
+
+        for (i in 0..GRID_ROWS - 2) {
+            for (j in 0..GRID_COLUMNS - 2) {
+                val p = i * GRID_COLUMNS + j
+
+                val v0 = p
+                val v1 = v0 + 1
+                val v2 = (i + 1) * GRID_COLUMNS + j
+                val v3 = v2 + 1
+
+                val idx = (i * (GRID_COLUMNS - 1) + j) * 6
+                o[idx + 0] = v0 //Bottom triangle
+                o[idx + 1] = v2
+                o[idx + 2] = v3
+                o[idx + 3] = v0 //Top triangle
+                o[idx + 4] = v3
+                o[idx + 5] = v1
+            }
+        }
+        return o;
+    }
 }
