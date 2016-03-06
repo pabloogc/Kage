@@ -4,6 +4,7 @@ import android.content.Context
 import android.opengl.GLES20.*
 import android.opengl.GLU
 import android.support.annotation.IntDef
+import android.util.Log
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -34,6 +35,13 @@ public data class Shader(val shader: Int) {
             val shader = glCreateShader(type).glCheck()
             glShaderSource(shader, source).glCheck()
             glCompileShader(shader).glCheck()
+            val state = intArrayOf(0)
+            glGetShaderiv(shader, GL_COMPILE_STATUS, state, 0)
+            if (state[0] == 0) {
+                val s = glGetShaderInfoLog(shader)
+                Log.e("Shader", "Error compiling: $s")
+                throw IllegalStateException(s)
+            }
             return Shader(shader)
         }
     }
@@ -54,11 +62,9 @@ public data class Program(
         return attr
     }
 
-    fun disableAttrib(attr: Int) {
-        glDisableVertexAttribArray(attr).glCheck()
-    }
+    fun getAttribLocation(name: String) = glGetAttribLocation(program, name)
 
-    fun getAttribLocation(name: String): Int = glGetAttribLocation(program, name)
+    fun getUniformLocation(name: String) = glGetUniformLocation(program, name)
 
     fun disable() {
         glCheckException()
@@ -128,6 +134,7 @@ public class ShaderBuilder {
 
 //Buffer utilities
 
+fun FloatArray.sizeBytes(): Int = size * 4
 
 fun FloatArray.toBuffer(): FloatBuffer {
     val out = ByteBuffer
@@ -148,6 +155,7 @@ fun IntArray.toBuffer(): IntBuffer {
     out.position(0)
     return out
 }
+
 
 //Error checking
 
