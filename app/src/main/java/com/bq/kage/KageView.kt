@@ -10,7 +10,7 @@ import android.view.MotionEvent
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
-const val USE_3D : Boolean = false;
+const val USE_3D: Boolean = false;
 
 class KageView(context: Context?, attrs: AttributeSet?)
 : GLSurfaceView(context, attrs) {
@@ -38,17 +38,15 @@ class KageView(context: Context?, attrs: AttributeSet?)
         return true
     }
 
-    val r = object : GLSurfaceView.Renderer {
+    private val r = object : GLSurfaceView.Renderer {
         private val modelMatrix = FloatArray(16)
         private val viewMatrix = FloatArray(16)
         private val projectionMatrix = FloatArray(16)
         private val mvpMatrix = FloatArray(16)
 
-        internal var wrap: Float = 0.0f
         lateinit var page: Page
 
         override fun onSurfaceCreated(unused: GL10, eglConfig: EGLConfig) {
-            page = Page(c)
             Matrix.setIdentityM(modelMatrix, 0)
             Matrix.setIdentityM(viewMatrix, 0)
             Matrix.setIdentityM(projectionMatrix, 0)
@@ -58,20 +56,19 @@ class KageView(context: Context?, attrs: AttributeSet?)
         override fun onSurfaceChanged(unused: GL10, w: Int, h: Int) {
             GLES20.glViewport(0, 0, w, h)
 
-
             Matrix.setIdentityM(projectionMatrix, 0)
+            val ratio = w.toFloat() / h;
+            val left = -1f;
+            val right = 1f;
+            val bottom = -ratio;
+            val top = ratio;
+            val near = 1.0f;
+            val far = 10.0f;
 
             if (USE_3D) {
-                val ratio = w.toFloat() / h;
-                val left = -ratio;
-                val right = ratio;
-                val bottom = -1.0f;
-                val top = 1.0f;
-                val near = 1.0f;
-                val far = 10.0f;
                 Matrix.frustumM(projectionMatrix, 0, left, right, bottom, top, near, far);
             } else {
-                Matrix.orthoM(projectionMatrix, 0, -1f, 1f, -1f, 1f, -10f, 10f);
+                Matrix.orthoM(projectionMatrix, 0, left, right, bottom, top, -10f, 10f);
             }
 
             val eyeX = 0.0f;
@@ -87,6 +84,8 @@ class KageView(context: Context?, attrs: AttributeSet?)
             val upZ = 0.0f;
 
             Matrix.setLookAtM(viewMatrix, 0, eyeX, eyeY, eyeZ, lookX, lookY, lookZ, upX, upY, upZ)
+
+            page = Page(c, 1f, ratio.toFloat())
         }
 
         override fun onDrawFrame(unused: GL10) {
@@ -103,7 +102,6 @@ class KageView(context: Context?, attrs: AttributeSet?)
 
             Matrix.setIdentityM(modelMatrix, 0)
             Matrix.setIdentityM(mvpMatrix, 0)
-
             //        Matrix.scaleM(modelMatrix, 0, 1f, -1f, 1f)
             if (USE_3D) {
                 Matrix.translateM(modelMatrix, 0, 0f, 0f, -1.5f)

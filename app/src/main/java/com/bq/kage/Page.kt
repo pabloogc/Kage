@@ -11,10 +11,10 @@ import java.nio.IntBuffer
 const val GRID_WIDTH = 2f
 const val GRID_HEIGHT = 2f
 
-const val GRID_ROWS = 160 * 2
-const val GRID_COLUMNS = 90 * 4
+const val GRID_ROWS = 300
+const val GRID_COLUMNS = 300
 
-class Page(context: Context) {
+class Page(context: Context, val width: Float, val height: Float) {
 
     private val program: Program
 
@@ -135,8 +135,8 @@ class Page(context: Context) {
         dy /= mod.toFloat();
         Log.d("Kage", "x:$x y:$y ($dx, $dy)")
 
-//        dx = Math.sqrt(2.0).toFloat();
-//        dy = dx;
+        //        dx = Math.sqrt(2.0).toFloat();
+        //        dy = dx;
 
         glUniform2fv(touchUniform, 1, touchPosition, 0).glCheck()
         glUniform2fv(directionUniform, 1, floatArrayOf(dx, dy), 0).glCheck()
@@ -187,11 +187,11 @@ class Page(context: Context) {
 
 
     private fun calculateVertexPositions(): FloatArray {
-        val w = GRID_WIDTH / (GRID_COLUMNS - 1)
-        val h = GRID_HEIGHT / (GRID_ROWS - 1)
+        val w = width * GRID_WIDTH / (GRID_COLUMNS - 1)
+        val h = height * GRID_HEIGHT / (GRID_ROWS - 1)
 
-        val cx = -1
-        val cy = -1
+        val cx = 0;
+        val cy = 0;
 
         val g = FloatArray(3 * GRID_ROWS * GRID_COLUMNS)
         for (i in 0..GRID_ROWS - 1) {
@@ -210,10 +210,6 @@ class Page(context: Context) {
         for (i in 0..GRID_ROWS - 1) {
             for (j in 0..GRID_COLUMNS - 1) {
                 val p = 4 * (i * GRID_COLUMNS + j)
-
-                //                val r = (i.toFloat() / GRID_ROWS)
-                //                val g = (j.toFloat() / GRID_COLUMNS)
-                //                val b = 1.0f
 
                 val r = 1f
                 val g = 1f
@@ -254,12 +250,20 @@ class Page(context: Context) {
     }
 
     private fun calculateTextureMapping(): FloatArray {
-        return vertexPosition
-                .filterIndexed { i, v ->
-                    i % 3 != 2 //drop z
-                }
-                .mapIndexed { i, v -> if (i % 2 == 1) -v else v } //flip Y
-                .map { (it + 1) / GRID_WIDTH }
+        val w = 1.0f / (GRID_COLUMNS - 1)
+        val h = 1.0f / (GRID_ROWS - 1)
+        val textureMap = FloatArray((vertexPosition.size / 3) * 2) //map 1 texture to each vertex
+        for (i in 0..GRID_ROWS - 1) {
+            for (j in 0..GRID_COLUMNS - 1) {
+                val p = 2 * (i * GRID_COLUMNS + j)
+                val s = j * w + width;
+                val t = i * h + height;
+                textureMap[p + 0] = s
+                textureMap[p + 1] = t
+            }
+        }
+        return textureMap
+                .mapIndexed { i, v -> if (i % 2 == 1) -v else v } //Flip y
                 .toFloatArray()
     }
 
