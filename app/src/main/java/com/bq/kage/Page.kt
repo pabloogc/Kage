@@ -184,11 +184,11 @@ class Page(context: Context, val width: Float, val height: Float) {
 
 
     private fun calculateVertexPositions(): FloatArray {
-        val w = 2 * width / (GRID_COLUMNS - 1)
-        val h = 2 * height / (GRID_ROWS - 1)
+        val w = width / (GRID_COLUMNS - 1)
+        val h = height / (GRID_ROWS - 1)
 
-        val cx = -width;
-        val cy = -height;
+        val cx = -width / 2.0f;
+        val cy = -height / 2.0f;
 
         val g = FloatArray(3 * GRID_ROWS * GRID_COLUMNS)
         for (i in 0..GRID_ROWS - 1) {

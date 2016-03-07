@@ -15,6 +15,7 @@ const val USE_3D: Boolean = false;
 class KageView(context: Context?, attrs: AttributeSet?)
 : GLSurfaceView(context, attrs) {
 
+    var ratio = 0f;
 
     val c: Context
     var touchX = 0f
@@ -32,7 +33,7 @@ class KageView(context: Context?, attrs: AttributeSet?)
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         touchX = -1 + 2 * (event.x / width)
-        touchY = -(-1 + 2 * (event.y / height))
+        touchY = ratio * (1 - 2 * (event.y / height))
         //Mote to model coordinates
         requestRender()
         return true
@@ -57,7 +58,7 @@ class KageView(context: Context?, attrs: AttributeSet?)
             GLES20.glViewport(0, 0, w, h)
 
             Matrix.setIdentityM(projectionMatrix, 0)
-            val ratio = w.toFloat() / h;
+            ratio = h.toFloat() / w;
             val left = -1f;
             val right = 1f;
             val bottom = -ratio;
@@ -85,7 +86,7 @@ class KageView(context: Context?, attrs: AttributeSet?)
 
             Matrix.setLookAtM(viewMatrix, 0, eyeX, eyeY, eyeZ, lookX, lookY, lookZ, upX, upY, upZ)
 
-            page = Page(c, 1f, ratio.toFloat())
+            page = Page(c, 2f, 2 * ratio)
         }
 
         override fun onDrawFrame(unused: GL10) {
