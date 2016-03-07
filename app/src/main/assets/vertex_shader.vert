@@ -79,15 +79,16 @@ void main() {
 
     if(!TRANSFORM) v = position;
 
-    fragColor = vec4(0.0, 0.0, 0.0, 0.0);
+    fragColor = vec4(1.0, 1.0, 1.0, 1.0);
 
-    if(test_right_side(-direction.xy, position.xy) < 0.0){
-        fragColor.g = 1.0;
+    if(test_right_side(rotate_vec2(0.0, direction.xy, ORIGIN), position.xy) > 0.0){
+//        if(test_right_side(direction.xy, position.xy) < 0.0){
+            fragColor.r = 0.0;
+//        }
     }
 
-    if(test_right_side(direction.yx, position.xy) < 0.0){
-        fragColor.r = 1.0;
-    }
+
+
 
     gl_PointSize = 1.0f;
     gl_Position = mvp * v;

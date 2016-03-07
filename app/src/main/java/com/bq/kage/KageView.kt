@@ -57,18 +57,19 @@ class KageView(context: Context?, attrs: AttributeSet?)
 
         override fun onSurfaceChanged(unused: GL10, w: Int, h: Int) {
             GLES20.glViewport(0, 0, w, h)
-            val ratio = w.toFloat() / h;
-            val left = -ratio;
-            val right = ratio;
-            val bottom = -1.0f;
-            val top = 1.0f;
-            val near = 1.0f;
-            val far = 10.0f;
+
 
             Matrix.setIdentityM(projectionMatrix, 0)
 
             if (USE_3D) {
-                Matrix.frustumM(projectionMatrix, 0, -1f, 1f, -1f, 1f, near, far);
+                val ratio = w.toFloat() / h;
+                val left = -ratio;
+                val right = ratio;
+                val bottom = -1.0f;
+                val top = 1.0f;
+                val near = 1.0f;
+                val far = 10.0f;
+                Matrix.frustumM(projectionMatrix, 0, left, right, bottom, top, near, far);
             } else {
                 Matrix.orthoM(projectionMatrix, 0, -1f, 1f, -1f, 1f, -10f, 10f);
             }

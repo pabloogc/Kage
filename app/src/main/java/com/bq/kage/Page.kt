@@ -39,7 +39,7 @@ class Page(context: Context) {
     private val vertexDrawOrder: IntArray
     private val vertexDrawOrderBuffer: IntBuffer
 
-    private val touchPosition = FloatArray(2, { -10f })
+    private val touchPosition = floatArrayOf(0.25f, -0.25f)
 
     //Buffers
     private val buffers = IntArray(4)
@@ -134,6 +134,9 @@ class Page(context: Context) {
         dx /= mod.toFloat();
         dy /= mod.toFloat();
         Log.d("Kage", "x:$x y:$y ($dx, $dy)")
+
+//        dx = Math.sqrt(2.0).toFloat();
+//        dy = dx;
 
         glUniform2fv(touchUniform, 1, touchPosition, 0).glCheck()
         glUniform2fv(directionUniform, 1, floatArrayOf(dx, dy), 0).glCheck()
