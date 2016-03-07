@@ -87,6 +87,10 @@ void main() {
 //        }
     }
 
+    if(test_right_side(vec2(-direction.x, direction.y), position.xy) < 0.0){
+                fragColor.b = 0.0;
+    }
+
 
 
 

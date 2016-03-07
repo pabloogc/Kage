@@ -8,11 +8,8 @@ import android.util.Log
 import java.nio.FloatBuffer
 import java.nio.IntBuffer
 
-const val GRID_WIDTH = 2f
-const val GRID_HEIGHT = 2f
-
-const val GRID_ROWS = 300
-const val GRID_COLUMNS = 300
+const val GRID_ROWS = 160
+const val GRID_COLUMNS = 90
 
 class Page(context: Context, val width: Float, val height: Float) {
 
@@ -187,11 +184,11 @@ class Page(context: Context, val width: Float, val height: Float) {
 
 
     private fun calculateVertexPositions(): FloatArray {
-        val w = width * GRID_WIDTH / (GRID_COLUMNS - 1)
-        val h = height * GRID_HEIGHT / (GRID_ROWS - 1)
+        val w = 2 * width / (GRID_COLUMNS - 1)
+        val h = 2 * height / (GRID_ROWS - 1)
 
-        val cx = 0;
-        val cy = 0;
+        val cx = -width;
+        val cy = -height;
 
         val g = FloatArray(3 * GRID_ROWS * GRID_COLUMNS)
         for (i in 0..GRID_ROWS - 1) {
@@ -256,8 +253,8 @@ class Page(context: Context, val width: Float, val height: Float) {
         for (i in 0..GRID_ROWS - 1) {
             for (j in 0..GRID_COLUMNS - 1) {
                 val p = 2 * (i * GRID_COLUMNS + j)
-                val s = j * w + width;
-                val t = i * h + height;
+                val s = j * w;
+                val t = i * h;
                 textureMap[p + 0] = s
                 textureMap[p + 1] = t
             }
