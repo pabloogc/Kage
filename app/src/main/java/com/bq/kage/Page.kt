@@ -10,8 +10,8 @@ import java.nio.IntBuffer
 const val GRID_WIDTH = 2f
 const val GRID_HEIGHT = 2f
 
-const val GRID_ROWS = 160
-const val GRID_COLUMNS = 90
+const val GRID_ROWS = 160 * 2
+const val GRID_COLUMNS = 90 * 4
 
 class Page(context: Context) {
 
@@ -192,14 +192,18 @@ class Page(context: Context) {
             for (j in 0..GRID_COLUMNS - 1) {
                 val p = 4 * (i * GRID_COLUMNS + j)
 
-                val r = (i.toFloat() / GRID_ROWS)
-                val g = (j.toFloat() / GRID_COLUMNS)
-                val b = 1.0f
+//                val r = (i.toFloat() / GRID_ROWS)
+//                val g = (j.toFloat() / GRID_COLUMNS)
+//                val b = 1.0f
+
+                val r = 1f
+                val g = 1f
+                val b = 1f
 
                 colors[p + 0] = r
                 colors[p + 1] = g
                 colors[p + 2] = b
-                colors[p + 3] = 1.0f //alpha
+                colors[p + 3] = 1.0f //unused alpha, there is no blend
             }
         }
         return colors

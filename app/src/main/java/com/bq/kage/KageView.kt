@@ -5,12 +5,16 @@ import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import android.util.AttributeSet
+import android.util.Log
 import android.view.MotionEvent
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
+const val USE_3D : Boolean = false;
+
 class KageView(context: Context?, attrs: AttributeSet?)
 : GLSurfaceView(context, attrs) {
+
 
     val c: Context
     var touchX = 0f
@@ -19,7 +23,6 @@ class KageView(context: Context?, attrs: AttributeSet?)
     init {
         c = context!!
     }
-
 
     public fun init() {
         setEGLContextClientVersion(2);
@@ -31,6 +34,7 @@ class KageView(context: Context?, attrs: AttributeSet?)
         touchX = -1 + 2 * (event.x / width)
         touchY = -(-1 + 2 * (event.y / height))
         //Mote to model coordinates
+        Log.d("Kage", "x:$touchX y:$touchY")
         return true
     }
 
@@ -62,8 +66,12 @@ class KageView(context: Context?, attrs: AttributeSet?)
             val far = 10.0f;
 
             Matrix.setIdentityM(projectionMatrix, 0)
-            //        Matrix.frustumM(projectionMatrix, 0, -1f, 1f, 1f, -1f, near, far);
-            Matrix.orthoM(projectionMatrix, 0, -1f, 1f, -1f, 1f, -10f, 10f);
+
+            if (USE_3D) {
+                Matrix.frustumM(projectionMatrix, 0, -1f, 1f, -1f, 1f, near, far);
+            } else {
+                Matrix.orthoM(projectionMatrix, 0, -1f, 1f, -1f, 1f, -10f, 10f);
+            }
 
             val eyeX = 0.0f;
             val eyeY = 0.0f;
@@ -95,24 +103,29 @@ class KageView(context: Context?, attrs: AttributeSet?)
             Matrix.setIdentityM(modelMatrix, 0)
             Matrix.setIdentityM(mvpMatrix, 0)
 
-            Matrix.translateM(modelMatrix, 0, 0f, 0f, -1.5f)
             //        Matrix.scaleM(modelMatrix, 0, 1f, -1f, 1f)
-            Matrix.rotateM(modelMatrix, 0, 0f, 0f, 1f, 0f)
+            if (USE_3D) {
+                Matrix.translateM(modelMatrix, 0, 0f, 0f, -1.5f)
+                Matrix.translateM(modelMatrix, 0, -1f, 0f, 0f)
+                Matrix.rotateM(modelMatrix, 0, -25f, 1f, 1f, 0f)
+            }
             Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
             Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
 
             page.draw(mvpMatrix, touchX, touchY)
 
-            Matrix.setIdentityM(modelMatrix, 0)
-            Matrix.setIdentityM(mvpMatrix, 0)
+            if (USE_3D) {
+                Matrix.setIdentityM(modelMatrix, 0)
+                Matrix.setIdentityM(mvpMatrix, 0)
 
-            Matrix.translateM(modelMatrix, 0, 2 * (1 - 2 * wrap), 0f, -0.5f)
-            Matrix.scaleM(modelMatrix, 0, -1f, 1f, 1f) //Flip Horizontal
-            Matrix.rotateM(modelMatrix, 0, 0f, 0f, 1f, 0f)
-            Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
-            Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
+                //Matrix.scaleM(modelMatrix, 0, -1f, 1f, 1f) //Flip Horizontal
+                Matrix.translateM(modelMatrix, 0, 1f, 0f, -1.5f)
+                Matrix.rotateM(modelMatrix, 0, 25f, 1f, 1f, 0f)
+                Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
+                Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
 
-            page.draw(mvpMatrix, touchX, touchY)
+                page.draw(mvpMatrix, touchX, touchY)
+            }
         }
     }
 }
