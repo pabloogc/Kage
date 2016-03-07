@@ -132,6 +132,18 @@ public class ShaderBuilder {
 
 }
 
+//Matrix utilities
+fun FloatArray.length(): Float {
+    val s = map { it * it }.sum().toDouble()
+    return Math.sqrt(s).toFloat();
+}
+
+fun FloatArray.normalize(): FloatArray {
+    val l = length()
+    return map { it / l }.toFloatArray()
+}
+
+
 //Buffer utilities
 
 fun FloatArray.sizeBytes(): Int = size * 4

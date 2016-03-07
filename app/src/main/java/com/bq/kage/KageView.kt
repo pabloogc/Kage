@@ -27,14 +27,14 @@ class KageView(context: Context?, attrs: AttributeSet?)
     public fun init() {
         setEGLContextClientVersion(2);
         setRenderer(r)
-        renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
+        renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         touchX = -1 + 2 * (event.x / width)
         touchY = -(-1 + 2 * (event.y / height))
         //Mote to model coordinates
-        Log.d("Kage", "x:$touchX y:$touchY")
+        requestRender()
         return true
     }
 

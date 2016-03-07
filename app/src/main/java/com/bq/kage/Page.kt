@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.BitmapFactory
 import android.opengl.GLES20.*
 import android.opengl.GLUtils
+import android.util.Log
 import java.nio.FloatBuffer
 import java.nio.IntBuffer
 
@@ -17,13 +18,14 @@ class Page(context: Context) {
 
     private val program: Program
 
-    private val positionAttr: Int;
-    private val colorAttr: Int;
-    private val textureAttr: Int;
+    private val positionAttr: Int
+    private val colorAttr: Int
+    private val textureAttr: Int
 
-    private val textureUniform: Int;
-    private val touchUniform: Int;
-    private val mvpUniform: Int;
+    private val textureUniform: Int
+    private val touchUniform: Int
+    private val mvpUniform: Int
+    private val directionUniform: Int
 
     private val vertexPosition: FloatArray
     private val vertexPositionBuffer: FloatBuffer
@@ -113,6 +115,7 @@ class Page(context: Context) {
         textureAttr = program.getAttribLocation("textCoord").glCheck()
         textureUniform = program.getUniformLocation("textureSampler").glCheck()
         touchUniform = program.getUniformLocation("touch").glCheck()
+        directionUniform = program.getUniformLocation("direction").glCheck()
         mvpUniform = program.getUniformLocation("mvp").glCheck()
     }
 
@@ -121,7 +124,20 @@ class Page(context: Context) {
 
         touchPosition[0] = x
         touchPosition[1] = y
+
+        //        val deltaY = 1f * (if (y != 0f) Math.signum(y) else 1f);
+        val s = (if ( y > 0) -1 else 1)
+        val deltaY = s * 0.25f;
+        var dx = s * (foldLineFunction(y - deltaY) - foldLineFunction(y + deltaY));
+        var dy = s * (y - deltaY)
+        val mod = Math.sqrt(dx.toDouble() * dx + dy * dy);
+        dx /= mod.toFloat();
+        dy /= mod.toFloat();
+        Log.d("Kage", "x:$x y:$y ($dx, $dy)")
+
         glUniform2fv(touchUniform, 1, touchPosition, 0).glCheck()
+        glUniform2fv(directionUniform, 1, floatArrayOf(dx, dy), 0).glCheck()
+
         glUniformMatrix4fv(mvpUniform, 1, false, mvpMatrix, 0).glCheck()
 
         //Texture uniform
@@ -192,9 +208,9 @@ class Page(context: Context) {
             for (j in 0..GRID_COLUMNS - 1) {
                 val p = 4 * (i * GRID_COLUMNS + j)
 
-//                val r = (i.toFloat() / GRID_ROWS)
-//                val g = (j.toFloat() / GRID_COLUMNS)
-//                val b = 1.0f
+                //                val r = (i.toFloat() / GRID_ROWS)
+                //                val g = (j.toFloat() / GRID_COLUMNS)
+                //                val b = 1.0f
 
                 val r = 1f
                 val g = 1f
@@ -242,5 +258,9 @@ class Page(context: Context) {
                 .mapIndexed { i, v -> if (i % 2 == 1) -v else v } //flip Y
                 .map { (it + 1) / GRID_WIDTH }
                 .toFloatArray()
+    }
+
+    private fun foldLineFunction(y: Float): Float {
+        return -(y * y);
     }
 }
