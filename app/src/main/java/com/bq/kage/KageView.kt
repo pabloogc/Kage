@@ -27,6 +27,7 @@ class KageView(context: Context?, attrs: AttributeSet?)
 
     public fun init() {
         setEGLContextClientVersion(2);
+        setEGLConfigChooser(MultisampleConfigChooser())
         setRenderer(r)
         renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
     }
@@ -93,7 +94,7 @@ class KageView(context: Context?, attrs: AttributeSet?)
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
             GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT);
 
-            GLES20.glClearColor(0f, 0f, 0f, 0f)
+            GLES20.glClearColor(0.3f, 0.3f, 0.3f, 1f)
 
             GLES20.glEnable(GLES20.GL_DEPTH_TEST);
             GLES20.glDepthFunc(GLES20.GL_LEQUAL);

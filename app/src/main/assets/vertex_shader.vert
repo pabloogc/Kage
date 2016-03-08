@@ -19,7 +19,9 @@ varying vec2 fragTextCoord;
 #define PI_HALF (PI / 2.0)
 
 const vec4 BACK_FACE_COLOR = vec4(0.4, 0.4, 0.4, 0.4);
-const float RAD = 0.25;
+const float RAD_SCALE_X = 1.0;
+const float RAD_SCALE_Y = 2.0;
+const float RAD = 0.25 * RAD_SCALE_X;
 const float RAD_PROJECTED = RAD * PI; //Half circuference
 
 //float test_right_side(vec2);
@@ -94,38 +96,35 @@ void main() {
     vec4 v = vec4(position.x, position.y, position.z, 1.0);
     vec2 cilinderCenter = vec2(touch.x, RAD);
 
-    if(test_right_side(touch, direction, position.xy) < 0.0) {
+
+    float test_right = test_right_side(touch, direction, position.xy);
+    if(test_right <= 0.0) {
         //position.x - touch.x < PI * RAD
         vec2 perp_vector = perpendicular_point_to_line(touch, direction, position.xy);
         float distanceToRect = length(perp_vector);
         float distanceToBackFace = (distanceToRect) / RAD_PROJECTED;
 
         float rotationZ = min(PI * distanceToBackFace, PI);
-        float rotationX = PI_HALF + angle(direction);
+        float rotationX = -(PI_HALF + abs(angle(direction)));
 
-        v.xy = v.xy - perp_vector.xy;
-        v.z = RAD * distanceToBackFace;
+        vec2 cilinderCenter = vec2(position.x - perp_vector.x, RAD);
+        v.xz = rotate_vec2(rotationZ, cilinderCenter, vec2(cilinderCenter.x, 0));
+        v.xy = rotate_vec2(rotationX, position.xy - perp_vector, position.xy);
+        v.z *= RAD_SCALE_Y;
+        v.x += 0.05;
 
+//        float distanceToBackFace = (position.x - touch.x) / RAD_PROJECTED;
+//        if(distanceToBackFace <= 1.0){ //Crest
+//            float rotation = PI * distanceToBackFace;
+//            v.xz = rotate_vec2(rotation, cilinderCenter, vec2(touch.x, 0));
 
         if(distanceToBackFace <= 1.0){ //Crest
+            float color = max(0.3, mix(0.0, 2.0 * RAD_SCALE_Y * RAD, v.z));
+            fragColor = vec4(color, color, color, 1.0);
+        }
+
 //            v.xz = rotate_vec2(rotationZ, cilinderCenter, vec2(touch.x, 0));
-            if(distanceToBackFace > 0.5f) fragColor = BACK_FACE_COLOR;
-            if(DEBUG) fragColor = vec4(0.0, 1.0 - distanceToBackFace, 0.0, 1.0);
-        } else { //Back face
-              v.z = RAD;
-              v.xy = v.xy - (normalize(perp_vector.xy) * (distanceToRect - RAD_PROJECTED));
-//              v.xy = v.xy - perp_vector.xy;
-//            v.xz = rotate_vec2(rotationZ, vec2(touch.x + RAD_PROJECTED, 0), position.xz);
-//            v.x = v.x - RAD_PROJECTED;
-//            v.z = 2.0 * RAD;
-//            v = position;
-            fragColor = BACK_FACE_COLOR;
-            if(DEBUG) fragColor = vec4(1.0, 0.0, 0.0, 0.0);
-         }
-
-
-
-    }
+        }
 
 //    if(!TRANSFORM){
 //            v = position;

@@ -265,6 +265,6 @@ class Page(context: Context, val width: Float, val height: Float) {
     }
 
     private fun foldLineFunction(y: Float): Float {
-        return -(y * y);
+        return -0.3f * (y * y);
     }
 }
