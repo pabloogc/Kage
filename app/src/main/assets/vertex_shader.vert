@@ -40,6 +40,10 @@ vec2 rotate_vec2(float rad, vec2 origin, vec2 point){
     return vp;
 }
 
+float angle_vector(vec2 v){
+    return atan(v.y / v.x);
+}
+
 float rect_eq(vec2 rect_point, vec2 rect_direction, float x){
     float slope = rect_direction.y / rect_direction.x;
     return slope * (x - rect_point.x) + rect_point.y;
@@ -99,7 +103,9 @@ void main() {
     fragColor = vec4(0.0, 0.0, 0.0, 0.0);
 
     if(v.x > w - cross_radius){
-       fragColor.g = 1.0;
+       float alpha = PI_HALF - angle_vector(v.xy - apex);
+       fragColor.r = 1.0;
+       fragColor.g = alpha / PI_HALF;
     }
 
     if(!TRANSFORM) v = position;
