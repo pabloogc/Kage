@@ -8,8 +8,9 @@ import android.util.Log
 import java.nio.FloatBuffer
 import java.nio.IntBuffer
 
-const val GRID_ROWS = 16
-const val GRID_COLUMNS = 180
+const val GRID_ROWS = 16 * 10
+const val GRID_COLUMNS = 9 * 10
+const val MODE = GL_TRIANGLES
 
 class Page(context: Context, val width: Float, val height: Float) {
 
@@ -20,7 +21,8 @@ class Page(context: Context, val width: Float, val height: Float) {
     private val textureAttr: Int
 
     private val textureUniform: Int
-    private val touchUniform: Int
+    private val apexUniform: Int
+    private val boundsUniform: Int
     private val mvpUniform: Int
     private val directionUniform: Int
 
@@ -36,7 +38,7 @@ class Page(context: Context, val width: Float, val height: Float) {
     private val vertexDrawOrder: IntArray
     private val vertexDrawOrderBuffer: IntBuffer
 
-    private val touchPosition = floatArrayOf(0.25f, -0.25f)
+    private val apex = floatArrayOf(0.25f, -0.25f)
 
     //Buffers
     private val buffers = IntArray(4)
@@ -99,8 +101,8 @@ class Page(context: Context, val width: Float, val height: Float) {
         glGenTextures(textures.size, textures, 0)
 
         glBindTexture(GL_TEXTURE_2D, textures[0])
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         GLUtils.texImage2D(GL_TEXTURE_2D, 0, bitmap, 0).glCheck()
 
         bitmap.recycle()
@@ -110,17 +112,19 @@ class Page(context: Context, val width: Float, val height: Float) {
         positionAttr = program.getAttribLocation("position").glCheck()
         colorAttr = program.getAttribLocation("color").glCheck()
         textureAttr = program.getAttribLocation("textCoord").glCheck()
+
+
+        boundsUniform = program.getUniformLocation("bounds").glCheck()
         textureUniform = program.getUniformLocation("textureSampler").glCheck()
-        touchUniform = program.getUniformLocation("touch").glCheck()
+        apexUniform = program.getUniformLocation("apex").glCheck()
         directionUniform = program.getUniformLocation("direction").glCheck()
         mvpUniform = program.getUniformLocation("mvp").glCheck()
+
     }
 
     fun draw(mvpMatrix: FloatArray, x: Float, y: Float) {
         program.enable()
 
-        touchPosition[0] = x
-        touchPosition[1] = y
 
         //        val deltaY = 1f * (if (y != 0f) Math.signum(y) else 1f);
         val s = (if ( y > 0) -1 else 1)
@@ -130,13 +134,31 @@ class Page(context: Context, val width: Float, val height: Float) {
         val mod = Math.sqrt(dx.toDouble() * dx + dy * dy);
         dx /= mod.toFloat();
         dy /= mod.toFloat();
-        Log.d("Kage", "x:$x y:$y ($dx, $dy)")
+
+        apex[0] = -width / 2
+        apex[1] = (dy / dx) * (apex[0] - x) + y;
+        Log.d("Kage", "x:$x y:$y (${apex[0]}, ${apex[1]})")
+
+//        if (apex[1] < height / 2 && apex[1] > 0) apex[1] = height / 2
+//        if (apex[1] > -height / 2 && apex[1] < 0) apex[1] = -height / 2
+
+        //        apex[1] = Math.min(-height / 2, apex[1]);
+        //        apex[1] = Math.min(height / 2, apex[1]);
+
 
         //        dx = Math.sqrt(2.0).toFloat();
         //        dy = dx;
 
-        glUniform2fv(touchUniform, 1, touchPosition, 0).glCheck()
+        val sqrt2 = x * Math.sqrt(2.0).toFloat()
+
+
+        glUniform2fv(apexUniform, 1, apex, 0).glCheck()
         glUniform2fv(directionUniform, 1, floatArrayOf(dx, dy), 0).glCheck()
+        glUniform4fv(boundsUniform, 1, floatArrayOf(
+                -width / 2f,
+                height / 2f,
+                width / 2f,
+                -height / 2f), 0).glCheck()
 
         glUniformMatrix4fv(mvpUniform, 1, false, mvpMatrix, 0).glCheck()
 
@@ -166,7 +188,7 @@ class Page(context: Context, val width: Float, val height: Float) {
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[0])
 
-        glDrawElements(GL_TRIANGLES,
+        glDrawElements(MODE,
                 vertexDrawOrder.size,
                 GL_UNSIGNED_INT,
                 0).glCheck();
