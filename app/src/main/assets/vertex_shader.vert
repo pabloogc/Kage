@@ -94,19 +94,12 @@ void main() {
     fragTextCoord = textCoord;
 
     vec4 v = vec4(position.x, position.y, position.z, 1.0);
-
     float cross_radius = w - rect_eq_inv(apex, direction, position.y);
-    float test_right = test_line_side(apex, direction, position.xy);
 
     fragColor = vec4(0.0, 0.0, 0.0, 0.0);
 
-
-    if(test_right <= 0.0){
+    if(v.x > w - cross_radius){
        fragColor.g = 1.0;
-    }
-
-    if(abs(cross_radius + position.x) > 0.25) {
-        fragColor.r = 1.0;
     }
 
     if(!TRANSFORM) v = position;
