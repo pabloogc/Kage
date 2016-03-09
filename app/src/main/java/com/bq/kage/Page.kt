@@ -8,8 +8,8 @@ import android.util.Log
 import java.nio.FloatBuffer
 import java.nio.IntBuffer
 
-const val GRID_ROWS = 160
-const val GRID_COLUMNS = 90
+const val GRID_ROWS = 16
+const val GRID_COLUMNS = 180
 
 class Page(context: Context, val width: Float, val height: Float) {
 
@@ -187,8 +187,8 @@ class Page(context: Context, val width: Float, val height: Float) {
         val w = width / (GRID_COLUMNS - 1)
         val h = height / (GRID_ROWS - 1)
 
-        val cx = -width / 2.0f;
-        val cy = -height / 2.0f;
+        val cx = -width / 2f;
+        val cy = -height / 2f;
 
         val g = FloatArray(3 * GRID_ROWS * GRID_COLUMNS)
         for (i in 0..GRID_ROWS - 1) {

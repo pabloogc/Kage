@@ -87,7 +87,7 @@ class KageView(context: Context?, attrs: AttributeSet?)
 
             Matrix.setLookAtM(viewMatrix, 0, eyeX, eyeY, eyeZ, lookX, lookY, lookZ, upX, upY, upZ)
 
-            page = Page(c, 2f, 2 * ratio)
+            page = Page(c, 1.5f, 1.5f*ratio)
         }
 
         override fun onDrawFrame(unused: GL10) {
@@ -104,12 +104,13 @@ class KageView(context: Context?, attrs: AttributeSet?)
 
             Matrix.setIdentityM(modelMatrix, 0)
             Matrix.setIdentityM(mvpMatrix, 0)
-            //        Matrix.scaleM(modelMatrix, 0, 1f, -1f, 1f)
+            Matrix.scaleM(modelMatrix, 0, 1f, 1f, 1f)
             if (USE_3D) {
                 Matrix.translateM(modelMatrix, 0, 0f, 0f, -1.5f)
                 Matrix.translateM(modelMatrix, 0, -1f, 0f, 0f)
                 Matrix.rotateM(modelMatrix, 0, -25f, 1f, 1f, 0f)
             }
+            //Matrix.rotateM(modelMatrix, 0, 90f, 1f, 0f, 0f)
             Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
             Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
 

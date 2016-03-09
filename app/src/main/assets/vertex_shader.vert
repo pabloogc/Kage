@@ -39,24 +39,12 @@ vec2 rotate_vec2(float rad, vec2 origin, vec2 point){
     return vp;
 }
 
-mat4 rotation_matrix(vec3 axis, float angle)
-{
-    axis = normalize(axis);
-    float s = sin(angle);
-    float c = cos(angle);
-    float oc = 1.0 - c;
-
-    return mat4(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,  0.0,
-                oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,  0.0,
-                oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c,           0.0,
-                0.0,                                0.0,                                0.0,                                1.0);
+float rect_eq_inv(vec2 point, vec2 direction, float y){
+    float slope = direction.x / direction.y;
+    return slope * (y - point.y) + point.x;
 }
 
-float angle(vec2 v) {
-    return atan(v.y / v.x);
-}
-
-float test_right_side(vec2 rect_point, vec2 dir, vec2 point) {
+float test_line_side(vec2 rect_point, vec2 dir, vec2 point) {
     //http://math.stackexchange.com/questions/274712/calculate-on-which-side-of-straign-line-is-dot-located
     //To determine which side of the line from A=(x1,y1) to B=(x2,y2)
     //a point P=(x,y)P=(x,y) falls on you need to compute the value:
@@ -66,7 +54,7 @@ float test_right_side(vec2 rect_point, vec2 dir, vec2 point) {
     return (point.x - a.x)*(b.y - a.y) - (point.y - a.y)*(b.x - a.x);
 }
 
-float distance_vec_to_point(vec2 rect_point, vec2 dir, vec2 point){
+float distance_line_to_point(vec2 rect_point, vec2 dir, vec2 point){
     vec2 p1 = rect_point;
     vec2 p2 = vec2(dir.x + touch.x, touch.y + dir.y);
 
@@ -84,61 +72,62 @@ float distance_vec_to_point(vec2 rect_point, vec2 dir, vec2 point){
     return abs(num) / sqrt(denom);
 }
 
-vec2 perpendicular_point_to_line(vec2 rect_point, vec2 dir, vec2 point){
+vec2 perpendicular_line_to_point(vec2 rect_point, vec2 dir, vec2 point){
     vec2 perp = vec2(-dir.y, dir.x);
-    return (distance_vec_to_point(rect_point, dir, point) * perp);
+    return (distance_line_to_point(rect_point, dir, point) * perp);
 }
 
 void main() {
+
+    gl_PointSize = 10.0f;
+
     fragColor = color;
     fragTextCoord = textCoord;
 
     vec4 v = vec4(position.x, position.y, position.z, 1.0);
     vec2 cilinderCenter = vec2(touch.x, RAD);
 
+    float test_right = test_line_side(touch, direction, position.xy);
 
-    float test_right = test_right_side(touch, direction, position.xy);
     if(test_right <= 0.0) {
         //position.x - touch.x < PI * RAD
-        vec2 perp_vector = perpendicular_point_to_line(touch, direction, position.xy);
+        vec2 perp_vector = perpendicular_line_to_point(touch, direction, position.xy);
         float distanceToRect = length(perp_vector);
-        float distanceToBackFace = (distanceToRect) / RAD_PROJECTED;
+        float distanceToBackFaceProportion = (distanceToRect) / RAD_PROJECTED;
+        float direction_angle = atan(perp_vector.y / perp_vector.x);
 
-        float rotationZ = min(PI * distanceToBackFace, PI);
-        float rotationX = -(PI_HALF + abs(angle(direction)));
+        if(distanceToBackFaceProportion <= 1.0){
+            //Curl up
+            vec2 rotationPoint = vec2(v.x - perp_vector.x, RAD);
 
-        vec2 cilinderCenter = vec2(position.x - perp_vector.x, RAD);
-        v.xz = rotate_vec2(rotationZ, cilinderCenter, vec2(cilinderCenter.x, 0));
-        v.xy = rotate_vec2(rotationX, position.xy - perp_vector, position.xy);
-        v.z *= RAD_SCALE_Y;
-        v.x += 0.05;
+            //
+            //      o      ·
+            //      |      ·
+            //      |      ·
+            //      |    ··
+            //      |  ··
+            //______···_____ ... distanceToBackFace = 1 (RAD_PROJECTED)
 
-//        float distanceToBackFace = (position.x - touch.x) / RAD_PROJECTED;
-//        if(distanceToBackFace <= 1.0){ //Crest
-//            float rotation = PI * distanceToBackFace;
-//            v.xz = rotate_vec2(rotation, cilinderCenter, vec2(touch.x, 0));
+            v.xz = rotate_vec2(distanceToBackFaceProportion * PI, rotationPoint, vec2(rotationPoint.x, 0));
 
-        if(distanceToBackFace <= 1.0){ //Crest
-            float color = max(0.3, mix(0.0, 2.0 * RAD_SCALE_Y * RAD, v.z));
-            fragColor = vec4(color, color, color, 1.0);
+            if(DEBUG) fragColor = vec4(1.0, 1.0, 0.0, 1.0);
         }
 
-//            v.xz = rotate_vec2(rotationZ, cilinderCenter, vec2(touch.x, 0));
+        //Rotate every point along the division rect
+        v.xy = rotate_vec2(direction_angle, vec2(rect_eq_inv(touch, direction, v.y), v.y), v.xy);
+
+        if(distanceToBackFaceProportion > 1.0) {
+            //Map the rest of the points (outside the curl) to a flat surface
+
+            vec2 n = normalize(perp_vector);
+            gl_PointSize = 5.0f;
+            v.xy = rotate_vec2(PI, v.xy - n* (distanceToRect - 0.5 * RAD_PROJECTED), v.xy);
+            v.z = 2.0 * RAD;
+
+            if(DEBUG) fragColor = vec4(1.0, 0.0, 1.0, 1.0);
         }
+    }
 
-//    if(!TRANSFORM){
-//            v = position;
-//            float d = touch.x - position.x;
-//            if(test_right_side(touch, vec2(0.0, -1.0), position.xy) < 0.0){
-//            mat4 r = rotation_matrix(vec3(0.0, direction.y, 0.0), PI * d * 0.5);
-//            v.x = v.x - d;
-//            v = r * v;
-//            v.x = v.x + d;
-//            }
-//        }
-//
-
-    gl_PointSize = 1.0f;
     gl_Position = mvp * v;
 }
 
