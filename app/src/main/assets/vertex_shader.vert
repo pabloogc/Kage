@@ -12,7 +12,7 @@ varying vec4 fragColor;
 varying vec2 fragTextCoord;
 
 #define DEBUG true
-#define TRANSFORM false
+#define TRANSFORM true
 #define ORIGIN vec2(0.0, 0.0)
 
 #define PI (3.14159265358979)
@@ -99,13 +99,17 @@ void main() {
 
     vec4 v = vec4(position.x, position.y, position.z, 1.0);
     float cross_radius = w - rect_eq_inv(apex, direction, position.y);
+    float point_radius = length(position.xy - apex);
 
-    fragColor = vec4(0.0, 0.0, 0.0, 0.0);
 
     if(v.x > w - cross_radius){
        float alpha = PI_HALF - angle_vector(v.xy - apex);
-       fragColor.r = 1.0;
-       fragColor.g = alpha / PI_HALF;
+       float zeta = PI_HALF - angle_vector(direction);
+       float beta = alpha / sin(zeta);
+
+       v.x = cross_radius * sin(beta);
+       v.y = point_radius + position.y - cross_radius * (1.0 - cos(beta)) * sin(zeta);
+       v.z = cross_radius * (1.0 - cos(beta)) * cos(zeta);
     }
 
     if(!TRANSFORM) v = position;
