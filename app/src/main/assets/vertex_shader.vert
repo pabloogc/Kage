@@ -1,5 +1,6 @@
 
 uniform mat4 mvp;
+uniform vec2 finger_tip;
 uniform vec2 apex;
 uniform vec2 direction;
 uniform vec4 bounds;
@@ -12,7 +13,8 @@ varying vec4 fragColor;
 varying vec2 fragTextCoord;
 
 #define DEBUG true
-#define TRANSFORM true
+#define TRANSFORM_CURL true
+#define TRANSFORM_ROTATION true
 #define ORIGIN vec2(0.0, 0.0)
 
 #define PI (3.14159265358979)
@@ -20,9 +22,7 @@ varying vec2 fragTextCoord;
 #define PI_HALF (PI / 2.0)
 
 const vec4 BACK_FACE_COLOR = vec4(0.4, 0.4, 0.4, 0.4);
-const float RAD_SCALE_X = 1.0;
-const float RAD_SCALE_Y = 2.0;
-const float RAD = 0.25 * RAD_SCALE_X;
+const float RAD = 0.15;
 const float RAD_PROJECTED = RAD * PI; //Half circuference
 
 //float test_right_side(vec2);
@@ -103,16 +103,58 @@ void main() {
 
 
     if(v.x > w - cross_radius){
-       float alpha = PI_HALF - angle_vector(v.xy - apex);
-       float zeta = PI_HALF - angle_vector(direction);
-       float beta = alpha / sin(zeta);
+        //position.x - touch.x < PI * RAD
+        fragColor = vec4(1.0, 1.0, 1.0, 1.0);
 
-       v.x = cross_radius * sin(beta);
-       v.y = point_radius + position.y - cross_radius * (1.0 - cos(beta)) * sin(zeta);
-       v.z = cross_radius * (1.0 - cos(beta)) * cos(zeta);
+        //position.x - touch.x < PI * RAD
+        vec2 perp_vector = perpendicular_line_to_point(apex, direction, position.xy);
+        float distanceToRect = length(perp_vector);
+        float distanceToBackFaceProportion = (distanceToRect) / RAD_PROJECTED;
+
+        if(distanceToBackFaceProportion <= 1.0){
+            //Curl up
+            vec2 rotationPoint = vec2(v.x - perp_vector.x, RAD);
+
+            //
+            //      o      ·
+            //      |      ·
+            //      |      ·
+            //      |    ··
+            //      |  ··
+            //______···_____ ... distanceToBackFace = 1 (RAD_PROJECTED)
+
+            if(TRANSFORM_CURL) v.xz = rotate_vec2(distanceToBackFaceProportion * PI, rotationPoint, vec2(rotationPoint.x, 0));
+
+            if(DEBUG) fragColor = vec4(1.0, 1.0, 0.0, 1.0);
+            if(DEBUG && distanceToBackFaceProportion <= 0.5) fragColor = vec4(0.0, 0.0, 1.0, 1.0);
+
+            //Rotate every point along the division rect
+
+        }
+
+        if(TRANSFORM_ROTATION){
+            float direction_angle = atan(perp_vector.y / perp_vector.x) * min(distanceToBackFaceProportion, 1.0);
+            v.xy = rotate_vec2(direction_angle, vec2(rect_eq_inv(apex, direction, v.y), v.y), v.xy);
+        }
+
+        if(distanceToBackFaceProportion >= 1.0 ) {
+            //Map the rest of the points (outside the curl) to a flat surface
+
+            vec2 n = normalize(perp_vector);
+            gl_PointSize = 5.0f;
+            v.xy = rotate_vec2(PI, v.xy - n* (distanceToRect - 0.5 * RAD_PROJECTED), v.xy);
+            v.z = 2.0 * RAD;
+
+            if(DEBUG) fragColor = vec4(1.0, 0.0, 1.0, 1.0);
+        }
+
+        if(DEBUG) {
+            float d = distance(finger_tip, v.xy);
+            if(d < 0.01f) {
+                fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+            }
+        }
     }
 
-    if(!TRANSFORM) v = position;
     gl_Position = mvp * v;
 }
-

@@ -4,15 +4,22 @@ import android.content.Context
 import android.graphics.BitmapFactory
 import android.opengl.GLES20.*
 import android.opengl.GLUtils
+import android.support.annotation.FloatRange
+import android.util.FloatMath
 import android.util.Log
 import java.nio.FloatBuffer
 import java.nio.IntBuffer
 
-const val GRID_ROWS = 16 * 10
-const val GRID_COLUMNS = 9 * 10
+const val TAG = "Kage"
+const val RAD = 0.15f
+const val PI = 0.15f * Math.PI.toFloat()
+const val DIAMETER = 2 * RAD;
 const val MODE = GL_TRIANGLES
 
 class Page(context: Context, val width: Float, val height: Float) {
+
+    private val gridRows: Int
+    private val gridColumns: Int
 
     private val program: Program
 
@@ -25,6 +32,7 @@ class Page(context: Context, val width: Float, val height: Float) {
     private val boundsUniform: Int
     private val mvpUniform: Int
     private val directionUniform: Int
+    private val fingerTipUniform: Int
 
     private val vertexPosition: FloatArray
     private val vertexPositionBuffer: FloatBuffer
@@ -46,6 +54,11 @@ class Page(context: Context, val width: Float, val height: Float) {
 
 
     init {
+
+        gridRows = 2
+        gridColumns = (gridRows * (height / width)).toInt()
+        //        gridColumns = 180
+
         vertexPosition = calculateVertexPositions()
         vertexPositionBuffer = vertexPosition.toBuffer()
 
@@ -101,8 +114,13 @@ class Page(context: Context, val width: Float, val height: Float) {
         glGenTextures(textures.size, textures, 0)
 
         glBindTexture(GL_TEXTURE_2D, textures[0])
+
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
         GLUtils.texImage2D(GL_TEXTURE_2D, 0, bitmap, 0).glCheck()
 
         bitmap.recycle()
@@ -113,8 +131,8 @@ class Page(context: Context, val width: Float, val height: Float) {
         colorAttr = program.getAttribLocation("color").glCheck()
         textureAttr = program.getAttribLocation("textCoord").glCheck()
 
-
         boundsUniform = program.getUniformLocation("bounds").glCheck()
+        fingerTipUniform = program.getUniformLocation("finger_tip").glCheck()
         textureUniform = program.getUniformLocation("textureSampler").glCheck()
         apexUniform = program.getUniformLocation("apex").glCheck()
         directionUniform = program.getUniformLocation("direction").glCheck()
@@ -122,36 +140,41 @@ class Page(context: Context, val width: Float, val height: Float) {
 
     }
 
-    fun draw(mvpMatrix: FloatArray, x: Float, y: Float) {
+    fun draw(mvpMatrix: FloatArray,
+             @FloatRange(from = -1.0, to = 1.0) x: Float,
+             @FloatRange(from = -1.0, to = 1.0) y: Float) {
+
         program.enable()
 
+        var xt = 0.5f * x * width;
+        var yt = 0.5f * y * height;
 
-        //        val deltaY = 1f * (if (y != 0f) Math.signum(y) else 1f);
-        val s = (if ( y > 0) -1 else 1)
-        val deltaY = s * 0.25f;
-        var dx = s * (foldLineFunction(y - deltaY) - foldLineFunction(y + deltaY));
-        var dy = s * (y - deltaY)
+        val right =  0.5f;
+        val left = -0.5f;
+
+        if(xt < 0.0){
+            xt /= 2;
+        } else {
+        }
+        //            xt = 0.15f * Math.sin(xt.toDouble() * (Math.PI)).toFloat()
+
+
+        //Derivative of the function
+        val sigNum = (if (yt > 0) -1 else 1)
+        val deltaY = sigNum * 0.25f;
+        var dx = sigNum * (foldLineFunction(yt - deltaY) - foldLineFunction(yt + deltaY));
+        var dy = sigNum * (yt - 0.5f * deltaY)
+
         val mod = Math.sqrt(dx.toDouble() * dx + dy * dy);
         dx /= mod.toFloat();
         dy /= mod.toFloat();
 
-        apex[0] = -width / 2
-        apex[1] = (dy / dx) * (apex[0] - x) + y;
-        Log.d("Kage", "x:$x y:$y (${apex[0]}, ${apex[1]})")
+        apex[0] = -width / 2;
+        apex[1] = (dy / dx) * (apex[0] - xt) + yt;
 
-//        if (apex[1] < height / 2 && apex[1] > 0) apex[1] = height / 2
-//        if (apex[1] > -height / 2 && apex[1] < 0) apex[1] = -height / 2
+        Log.d("Kage", "x:$x xt:$xt")
 
-        //        apex[1] = Math.min(-height / 2, apex[1]);
-        //        apex[1] = Math.min(height / 2, apex[1]);
-
-
-        //        dx = Math.sqrt(2.0).toFloat();
-        //        dy = dx;
-
-        val sqrt2 = x * Math.sqrt(2.0).toFloat()
-
-
+        glUniform2fv(fingerTipUniform, 1, floatArrayOf(xt, yt), 0).glCheck()
         glUniform2fv(apexUniform, 1, apex, 0).glCheck()
         glUniform2fv(directionUniform, 1, floatArrayOf(dx, dy), 0).glCheck()
         glUniform4fv(boundsUniform, 1, floatArrayOf(
@@ -206,16 +229,16 @@ class Page(context: Context, val width: Float, val height: Float) {
 
 
     private fun calculateVertexPositions(): FloatArray {
-        val w = width / (GRID_COLUMNS - 1)
-        val h = height / (GRID_ROWS - 1)
+        val w = width / (gridColumns - 1)
+        val h = height / (gridRows - 1)
 
         val cx = -width / 2f;
         val cy = -height / 2f;
 
-        val g = FloatArray(3 * GRID_ROWS * GRID_COLUMNS)
-        for (i in 0..GRID_ROWS - 1) {
-            for (j in 0..GRID_COLUMNS - 1) {
-                val p = 3 * (i * GRID_COLUMNS + j)
+        val g = FloatArray(3 * gridRows * gridColumns)
+        for (i in 0..gridRows - 1) {
+            for (j in 0..gridColumns - 1) {
+                val p = 3 * (i * gridColumns + j)
                 g[p] = cx + j * w//x
                 g[p + 1] = cy + i * h //y
                 g[p + 2] = 0f //z
@@ -225,10 +248,10 @@ class Page(context: Context, val width: Float, val height: Float) {
     }
 
     private fun calculateVertexColor(): FloatArray {
-        val colors = FloatArray(4 * GRID_ROWS * GRID_COLUMNS)
-        for (i in 0..GRID_ROWS - 1) {
-            for (j in 0..GRID_COLUMNS - 1) {
-                val p = 4 * (i * GRID_COLUMNS + j)
+        val colors = FloatArray(4 * gridRows * gridColumns)
+        for (i in 0..gridRows - 1) {
+            for (j in 0..gridColumns - 1) {
+                val p = 4 * (i * gridColumns + j)
 
                 val r = 1f
                 val g = 1f
@@ -244,19 +267,19 @@ class Page(context: Context, val width: Float, val height: Float) {
     }
 
     private fun calculateVertexDrawOrder(): IntArray {
-        val squares = (GRID_ROWS - 1) * (GRID_COLUMNS - 1)
+        val squares = (gridRows - 1) * (gridColumns - 1)
         val o = kotlin.IntArray(squares * 6) //3 per triangle in the square
 
-        for (i in 0..GRID_ROWS - 2) {
-            for (j in 0..GRID_COLUMNS - 2) {
-                val p = i * GRID_COLUMNS + j
+        for (i in 0..gridRows - 2) {
+            for (j in 0..gridColumns - 2) {
+                val p = i * gridColumns + j
 
                 val v0 = p
                 val v1 = v0 + 1
-                val v2 = (i + 1) * GRID_COLUMNS + j
+                val v2 = (i + 1) * gridColumns + j
                 val v3 = v2 + 1
 
-                val idx = (i * (GRID_COLUMNS - 1) + j) * 6
+                val idx = (i * (gridColumns - 1) + j) * 6
                 o[idx + 0] = v0 //Bottom triangle
                 o[idx + 1] = v2
                 o[idx + 2] = v3
@@ -269,12 +292,12 @@ class Page(context: Context, val width: Float, val height: Float) {
     }
 
     private fun calculateTextureMapping(): FloatArray {
-        val w = 1.0f / (GRID_COLUMNS - 1)
-        val h = 1.0f / (GRID_ROWS - 1)
+        val w = 1.0f / (gridColumns - 1)
+        val h = 1.0f / (gridRows - 1)
         val textureMap = FloatArray((vertexPosition.size / 3) * 2) //map 1 texture to each vertex
-        for (i in 0..GRID_ROWS - 1) {
-            for (j in 0..GRID_COLUMNS - 1) {
-                val p = 2 * (i * GRID_COLUMNS + j)
+        for (i in 0..gridRows - 1) {
+            for (j in 0..gridColumns - 1) {
+                val p = 2 * (i * gridColumns + j)
                 val s = j * w;
                 val t = i * h;
                 textureMap[p + 0] = s
@@ -287,6 +310,6 @@ class Page(context: Context, val width: Float, val height: Float) {
     }
 
     private fun foldLineFunction(y: Float): Float {
-        return -0.3f * (y * y);
+        return -0.2f * (y * y);
     }
 }

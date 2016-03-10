@@ -1,6 +1,9 @@
 package com.bq.kage
 
 import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
@@ -29,13 +32,12 @@ class KageView(context: Context?, attrs: AttributeSet?)
         setEGLContextClientVersion(2);
         setEGLConfigChooser(MultisampleConfigChooser())
         setRenderer(r)
-        renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
+        renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        touchX = -1 + 2 * (event.x / width)
-        touchY = ratio * (1 - 2 * (event.y / height))
-        //Mote to model coordinates
+        touchX = (event.x / width / 0.5f) - 1;
+        touchY = -(event.y / height / 0.5f) + 1;
         requestRender()
         return true
     }
@@ -104,7 +106,7 @@ class KageView(context: Context?, attrs: AttributeSet?)
 
             Matrix.setIdentityM(modelMatrix, 0)
             Matrix.setIdentityM(mvpMatrix, 0)
-            Matrix.scaleM(modelMatrix, 0, 1f, 1f, 1f)
+            Matrix.scaleM(modelMatrix, 0, 2f, 2f, 1f)
             if (USE_3D) {
                 Matrix.translateM(modelMatrix, 0, 0f, 0f, -1.5f)
                 Matrix.translateM(modelMatrix, 0, -1f, 0f, 0f)
