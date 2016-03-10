@@ -87,7 +87,7 @@ class KageView(context: Context?, attrs: AttributeSet?)
 
             Matrix.setLookAtM(viewMatrix, 0, eyeX, eyeY, eyeZ, lookX, lookY, lookZ, upX, upY, upZ)
 
-            page = Page(c, 1.5f, 1.5f*ratio)
+            page = Page(c, 1f, 1f*ratio)
         }
 
         override fun onDrawFrame(unused: GL10) {
