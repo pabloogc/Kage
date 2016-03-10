@@ -13,7 +13,7 @@ import android.view.MotionEvent
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
-const val USE_3D: Boolean = false;
+const val USE_3D: Boolean = true;
 
 class KageView(context: Context?, attrs: AttributeSet?)
 : GLSurfaceView(context, attrs) {
@@ -61,6 +61,9 @@ class KageView(context: Context?, attrs: AttributeSet?)
             GLES20.glViewport(0, 0, w, h)
 
             Matrix.setIdentityM(projectionMatrix, 0)
+            Matrix.setIdentityM(mvpMatrix, 0)
+            Matrix.setIdentityM(modelMatrix, 0)
+
             ratio = h.toFloat() / w;
             val left = -1f;
             val right = 1f;
@@ -89,7 +92,7 @@ class KageView(context: Context?, attrs: AttributeSet?)
 
             Matrix.setLookAtM(viewMatrix, 0, eyeX, eyeY, eyeZ, lookX, lookY, lookZ, upX, upY, upZ)
 
-            page = Page(c, 1f, 1f*ratio)
+            page = Page(c, 1f, 1f * ratio)
         }
 
         override fun onDrawFrame(unused: GL10) {
@@ -104,33 +107,36 @@ class KageView(context: Context?, attrs: AttributeSet?)
             val period = 100000
             val rot = (System.currentTimeMillis() % period) / period.toFloat() * 360
 
-            Matrix.setIdentityM(modelMatrix, 0)
-            Matrix.setIdentityM(mvpMatrix, 0)
-            Matrix.scaleM(modelMatrix, 0, 2f, 2f, 1f)
             if (USE_3D) {
-                Matrix.translateM(modelMatrix, 0, 0f, 0f, -1.5f)
-                Matrix.translateM(modelMatrix, 0, -1f, 0f, 0f)
-                Matrix.rotateM(modelMatrix, 0, -25f, 1f, 1f, 0f)
-            }
-            //Matrix.rotateM(modelMatrix, 0, 90f, 1f, 0f, 0f)
-            Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
-            Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
+                //Top left
+                Matrix.translateM(modelMatrix, 0, -0.5f, ratio /2, -0.5f)
+                drawAndReset()
 
-            page.draw(mvpMatrix, touchX, touchY)
+                //Top right
+                Matrix.translateM(modelMatrix, 0, 0.5f, ratio / 2, -0.5f)
+                drawAndReset()
 
-            if (USE_3D) {
-                Matrix.setIdentityM(modelMatrix, 0)
-                Matrix.setIdentityM(mvpMatrix, 0)
-
-                //Matrix.scaleM(modelMatrix, 0, -1f, 1f, 1f) //Flip Horizontal
-                Matrix.translateM(modelMatrix, 0, 1f, 0f, -1.5f)
-                Matrix.rotateM(modelMatrix, 0, 25f, 1f, 1f, 0f)
-                Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
-                Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
-
-                page.draw(mvpMatrix, touchX, touchY)
+                //Bottom right
+                Matrix.translateM(modelMatrix, 0, -0.5f, -ratio / 2, -0.5f)
+                drawAndReset()
+            } else {
+                Matrix.scaleM(modelMatrix, 0, 2f, 2f, 1f)
+                drawAndReset()
             }
         }
+
+        fun drawAndReset(){
+            Matrix.setIdentityM(mvpMatrix, 0)
+
+            Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
+            Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
+            page.draw(mvpMatrix, touchX, touchY)
+
+            Matrix.setIdentityM(mvpMatrix, 0)
+            Matrix.setIdentityM(modelMatrix, 0)
+        }
     }
+
+
 }
 
