@@ -259,9 +259,9 @@ class Page(context: Context, val width: Float, val height: Float) {
             for (j in 0..gridColumns - 1) {
                 val p = 4 * (i * gridColumns + j)
 
-                val r = 1f
-                val g = 1f
-                val b = 1f
+                val r = 0f
+                val g = 0f
+                val b = 0f
 
                 colors[p + 0] = r
                 colors[p + 1] = g

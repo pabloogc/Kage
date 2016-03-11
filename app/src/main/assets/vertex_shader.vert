@@ -21,7 +21,9 @@ varying vec2 fragTextCoord;
 #define PI_2 (PI * 2.0)
 #define PI_HALF (PI / 2.0)
 
-const vec4 BACK_FACE_COLOR = vec4(0.4, 0.4, 0.4, 0.4);
+const float BACK_ALPHA = 0.1;
+const vec4 BACK_FACE_COLOR = vec4(1.0, 1.0, 1.0, BACK_ALPHA);
+
 const float RAD = 0.15;
 const float RAD_PROJECTED = RAD * PI; //Half circuference
 
@@ -98,13 +100,14 @@ void main() {
     fragTextCoord = textCoord;
 
     vec4 v = vec4(position.x, position.y, position.z, 1.0);
+    vec4 n = vec4(0.0, 0.0, 1.0, 1.0); //Normal vector
+
     float cross_radius = w - rect_eq_inv(apex, direction, position.y);
     float point_radius = length(position.xy - apex);
 
 
     if(v.x > w - cross_radius){
         //position.x - touch.x < PI * RAD
-        fragColor = vec4(1.0, 1.0, 1.0, 1.0);
 
         //position.x - touch.x < PI * RAD
         vec2 perp_vector = perpendicular_line_to_point(apex, direction, position.xy);
@@ -125,8 +128,8 @@ void main() {
 
             if(TRANSFORM_CURL) v.xz = rotate_vec2(distanceToBackFaceProportion * PI, rotationPoint, vec2(rotationPoint.x, 0));
 
+            if(distanceToBackFaceProportion >= 0.495) fragColor = BACK_FACE_COLOR;
             if(DEBUG) fragColor = vec4(1.0, 1.0, 0.0, 1.0);
-            if(DEBUG && distanceToBackFaceProportion <= 0.5) fragColor = vec4(0.0, 0.0, 1.0, 1.0);
 
             //Rotate every point along the division rect
 
@@ -146,6 +149,7 @@ void main() {
             v.xy = rotate_vec2(PI, v.xy - n* (distanceToRect - 0.5 * RAD_PROJECTED), v.xy);
             v.z = 2.0 * RAD;
 
+            fragColor = BACK_FACE_COLOR;
             if(DEBUG) fragColor = vec4(1.0, 0.0, 1.0, 1.0);
         }
 
