@@ -1,11 +1,10 @@
 package com.bq.kage
 
 import android.content.Context
-import android.graphics.BitmapFactory
+import android.graphics.*
 import android.opengl.GLES20.*
 import android.opengl.GLUtils
 import android.support.annotation.FloatRange
-import android.util.FloatMath
 import android.util.Log
 import java.nio.FloatBuffer
 import java.nio.IntBuffer
@@ -15,9 +14,11 @@ const val RAD = 0.15f
 const val PI = 0.15f * Math.PI.toFloat()
 const val DIAMETER = 2 * RAD;
 const val MODE = GL_TRIANGLES
+const val SHADOW_PADDING = 0
 
 class Page(context: Context, val width: Float, val height: Float) {
 
+    private val padding = if (SHADOW_PADDING == 0) 0f else 1f / SHADOW_PADDING
     private val gridRows: Int
     private val gridColumns: Int
 
@@ -106,21 +107,34 @@ class Page(context: Context, val width: Float, val height: Float) {
 
         //Textures
         val options = BitmapFactory.Options().apply {
-            inScaled = false
+            //inScaled = false
         }
 
-        val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.texture, options)
+
+        //Texture generation
+
+        val baseBitmap = BitmapFactory.decodeResource(context.resources, R.drawable.texture, options)
+        val bitmap = Bitmap.createBitmap(
+                baseBitmap.width + 2 * SHADOW_PADDING,
+                baseBitmap.height + 2 * SHADOW_PADDING,
+                Bitmap.Config.ARGB_8888);
+
+        val canvas = Canvas(bitmap)
+        canvas.drawColor(Color.BLACK)
+        canvas.drawBitmap(baseBitmap,
+                SHADOW_PADDING.toFloat(),
+                SHADOW_PADDING.toFloat(),
+                Paint(Paint.FILTER_BITMAP_FLAG))
+
+        baseBitmap.recycle()
+
 
         glGenTextures(textures.size, textures, 0)
-
         glBindTexture(GL_TEXTURE_2D, textures[0])
-
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
         GLUtils.texImage2D(GL_TEXTURE_2D, 0, bitmap, 0).glCheck()
 
         bitmap.recycle()
@@ -158,7 +172,6 @@ class Page(context: Context, val width: Float, val height: Float) {
         } else if (right - xt < turn_point) {
             val p = (right - xt) / turn_point;
             xt = right - Math.sin(p * Math.PI * 0.5).toFloat() * turn_point * 3f ;
-            Log.d(TAG, "xt: $xt, p:$p")
         } else {
             val p = 0.5f * xt / (2 * turn_point)
             xt = 2f * turn_point * p;
@@ -183,7 +196,7 @@ class Page(context: Context, val width: Float, val height: Float) {
         glUniform2fv(fingerTipUniform, 1, floatArrayOf(xt, yt), 0).glCheck()
         glUniform2fv(apexUniform, 1, apex, 0).glCheck()
         glUniform2fv(directionUniform, 1, floatArrayOf(dx, dy), 0).glCheck()
-        glUniform4fv(boundsUniform, 1, floatArrayOf(
+        glUniform1fv(boundsUniform, 4, floatArrayOf(
                 -width / 2f,
                 height / 2f,
                 width / 2f,
@@ -235,11 +248,11 @@ class Page(context: Context, val width: Float, val height: Float) {
 
 
     private fun calculateVertexPositions(): FloatArray {
-        val w = width / (gridColumns - 1)
-        val h = height / (gridRows - 1)
+        val w = (width + 2 * padding) / (gridColumns - 1)
+        val h = (height + 2 * padding) / (gridRows - 1)
 
-        val cx = -width / 2f;
-        val cy = -height / 2f;
+        val cx = -width / 2f - padding;
+        val cy = -height / 2f - padding;
 
         val g = FloatArray(3 * gridRows * gridColumns)
         for (i in 0..gridRows - 1) {
@@ -259,14 +272,14 @@ class Page(context: Context, val width: Float, val height: Float) {
             for (j in 0..gridColumns - 1) {
                 val p = 4 * (i * gridColumns + j)
 
-                val r = 0f
-                val g = 0f
-                val b = 0f
+                val r = 1f
+                val g = 1f
+                val b = 1f
 
                 colors[p + 0] = r
                 colors[p + 1] = g
                 colors[p + 2] = b
-                colors[p + 3] = 1.0f //unused alpha, there is no blend
+                colors[p + 3] = 1f
             }
         }
         return colors
@@ -276,8 +289,8 @@ class Page(context: Context, val width: Float, val height: Float) {
         val squares = (gridRows - 1) * (gridColumns - 1)
         val o = kotlin.IntArray(squares * 6) //3 per triangle in the square
 
-        for (i in 0..gridRows - 2) {
-            for (j in 0..gridColumns - 2) {
+        for (i in gridRows - 2 downTo 0) {
+            for (j in gridColumns - 2 downTo 0) {
                 val p = i * gridColumns + j
 
                 val v0 = p

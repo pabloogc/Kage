@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.opengl.GLES20
+import android.opengl.GLES20.*
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import android.util.AttributeSet
@@ -55,10 +56,16 @@ class KageView(context: Context?, attrs: AttributeSet?)
             Matrix.setIdentityM(viewMatrix, 0)
             Matrix.setIdentityM(projectionMatrix, 0)
             Matrix.setIdentityM(mvpMatrix, 0)
+
+            glEnable (GL_BLEND);
+            glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+            glEnable(GL_DEPTH_TEST);
+            glDepthFunc(GL_LEQUAL);
         }
 
         override fun onSurfaceChanged(unused: GL10, w: Int, h: Int) {
-            GLES20.glViewport(0, 0, w, h)
+            glViewport(0, 0, w, h)
 
             Matrix.setIdentityM(projectionMatrix, 0)
             Matrix.setIdentityM(mvpMatrix, 0)
@@ -96,16 +103,13 @@ class KageView(context: Context?, attrs: AttributeSet?)
         }
 
         override fun onDrawFrame(unused: GL10) {
-            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
-            GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT);
-
-            GLES20.glClearColor(0.3f, 0.3f, 0.3f, 1f)
-
-            GLES20.glEnable(GLES20.GL_DEPTH_TEST);
-            GLES20.glDepthFunc(GLES20.GL_LEQUAL);
+            glClear(GL_COLOR_BUFFER_BIT)
+            glClear(GL_DEPTH_BUFFER_BIT);
 
             val period = 100000
             val rot = (System.currentTimeMillis() % period) / period.toFloat() * 360
+
+            glClearColor(1f, 1f, 1f, 1f)
 
             if (USE_3D) {
                 //Top left

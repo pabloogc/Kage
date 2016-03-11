@@ -3,12 +3,13 @@ uniform mat4 mvp;
 uniform vec2 finger_tip;
 uniform vec2 apex;
 uniform vec2 direction;
-uniform vec4 bounds;
+uniform float bounds[4];
 
 attribute vec4 color;
 attribute vec4 position;
 attribute vec2 textCoord;
 
+varying float fragWhite;
 varying vec4 fragColor;
 varying vec2 fragTextCoord;
 
@@ -21,9 +22,8 @@ varying vec2 fragTextCoord;
 #define PI_2 (PI * 2.0)
 #define PI_HALF (PI / 2.0)
 
-const float BACK_ALPHA = 0.1;
-const vec4 BACK_FACE_COLOR = vec4(1.0, 1.0, 1.0, BACK_ALPHA);
-
+const float BACK_ALPHA = 0.3;
+const float BACK_GRAY = 1.0;
 const float RAD = 0.15;
 const float RAD_PROJECTED = RAD * PI; //Half circuference
 
@@ -91,11 +91,12 @@ vec2 perpendicular_line_to_point(vec2 rect_point, vec2 dir, vec2 point){
 
 void main() {
 
-    float w = bounds.z - bounds.x;
-    float h = bounds.w - bounds.y;
+    float w = bounds[0] - bounds[2];
+    float h = bounds[1] - bounds[3];
 
     gl_PointSize = 10.0f;
 
+    fragWhite = 1.0;
     fragColor = color;
     fragTextCoord = textCoord;
 
@@ -128,7 +129,11 @@ void main() {
 
             if(TRANSFORM_CURL) v.xz = rotate_vec2(distanceToBackFaceProportion * PI, rotationPoint, vec2(rotationPoint.x, 0));
 
-            if(distanceToBackFaceProportion >= 0.495) fragColor = BACK_FACE_COLOR;
+            if(distanceToBackFaceProportion >= 0.495) {
+                float c = BACK_GRAY * (distanceToBackFaceProportion - 0.5) * 2.0;
+                fragColor = vec4(c, c, c, 1f);
+                fragWhite = BACK_ALPHA;
+            }
             if(DEBUG) fragColor = vec4(1.0, 1.0, 0.0, 1.0);
 
             //Rotate every point along the division rect
@@ -149,7 +154,8 @@ void main() {
             v.xy = rotate_vec2(PI, v.xy - n* (distanceToRect - 0.5 * RAD_PROJECTED), v.xy);
             v.z = 2.0 * RAD;
 
-            fragColor = BACK_FACE_COLOR;
+            fragWhite = BACK_ALPHA;
+            fragColor = vec4(BACK_GRAY, BACK_GRAY, BACK_GRAY, 1f);
             if(DEBUG) fragColor = vec4(1.0, 0.0, 1.0, 1.0);
         }
 
@@ -159,6 +165,12 @@ void main() {
                 fragColor = vec4(1.0, 0.0, 0.0, 1.0);
             }
         }
+    }
+
+    if(position.x > 0.5){
+        float d = position.x - 0.5f;
+        fragColor = vec4(0.0, 0.0, 0.0, d);
+        fragWhite = 1.0;
     }
 
     gl_Position = mvp * v;
