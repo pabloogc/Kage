@@ -12,7 +12,7 @@ attribute vec2 textCoord;
 varying vec4 fragColor;
 varying vec2 fragTextCoord;
 
-#define DEBUG true
+#define DEBUG false
 #define TRANSFORM_CURL true
 #define TRANSFORM_ROTATION true
 #define ORIGIN vec2(0.0, 0.0)
@@ -133,7 +133,8 @@ void main() {
         }
 
         if(TRANSFORM_ROTATION){
-            float direction_angle = atan(perp_vector.y / perp_vector.x) * min(distanceToBackFaceProportion, 1.0);
+            float direction_angle = atan(perp_vector.y / perp_vector.x);
+            direction_angle *= min(distanceToBackFaceProportion, 1.0); //Linear interpolation
             v.xy = rotate_vec2(direction_angle, vec2(rect_eq_inv(apex, direction, v.y), v.y), v.xy);
         }
 

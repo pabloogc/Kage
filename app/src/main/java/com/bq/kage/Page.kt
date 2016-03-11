@@ -55,7 +55,7 @@ class Page(context: Context, val width: Float, val height: Float) {
 
     init {
 
-        gridRows = 2
+        gridRows = 16
         gridColumns = (gridRows * (height / width)).toInt()
         //        gridColumns = 180
 
@@ -147,17 +147,24 @@ class Page(context: Context, val width: Float, val height: Float) {
         program.enable()
 
         var xt = 0.5f * x * width;
+        val xtc = xt;
         var yt = 0.5f * y * height;
 
-        val right =  0.5f;
-        val left = -0.5f;
+        val right = 0.5f;
+        val turn_point = 0.1f
 
-        if(xt < 0.0){
-            xt /= 2;
+        if (xt < 0.0) {
+            xt /= 2f;
+        } else if (right - xt < turn_point) {
+            val p = (right - xt) / turn_point;
+            xt = right - Math.sin(p * Math.PI * 0.5).toFloat() * turn_point * 3f ;
+            Log.d(TAG, "xt: $xt, p:$p")
         } else {
+            val p = 0.5f * xt / (2 * turn_point)
+            xt = 2f * turn_point * p;
         }
-        //            xt = 0.15f * Math.sin(xt.toDouble() * (Math.PI)).toFloat()
 
+        //Log.d("Kage", "xtc:$xtc xt:$xt diff:$diff")
 
         //Derivative of the function
         val sigNum = (if (yt > 0) -1 else 1)
@@ -172,7 +179,6 @@ class Page(context: Context, val width: Float, val height: Float) {
         apex[0] = -width / 2;
         apex[1] = (dy / dx) * (apex[0] - xt) + yt;
 
-        Log.d("Kage", "x:$x xt:$xt")
 
         glUniform2fv(fingerTipUniform, 1, floatArrayOf(xt, yt), 0).glCheck()
         glUniform2fv(apexUniform, 1, apex, 0).glCheck()

@@ -13,7 +13,7 @@ import android.view.MotionEvent
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
-const val USE_3D: Boolean = true;
+const val USE_3D: Boolean = false;
 
 class KageView(context: Context?, attrs: AttributeSet?)
 : GLSurfaceView(context, attrs) {
@@ -32,7 +32,7 @@ class KageView(context: Context?, attrs: AttributeSet?)
         setEGLContextClientVersion(2);
         setEGLConfigChooser(MultisampleConfigChooser())
         setRenderer(r)
-        renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
+        renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -109,23 +109,31 @@ class KageView(context: Context?, attrs: AttributeSet?)
 
             if (USE_3D) {
                 //Top left
-                Matrix.translateM(modelMatrix, 0, -0.5f, ratio /2, -0.5f)
+                Matrix.translateM(modelMatrix, 0, -0.5f, ratio / 2, -0.5f)
                 drawAndReset()
 
                 //Top right
                 Matrix.translateM(modelMatrix, 0, 0.5f, ratio / 2, -0.5f)
+                Matrix.rotateM(modelMatrix, 0, -90f, 0f, 1f, 0f)
+                drawAndReset()
+
+                //Bottom left
+                Matrix.translateM(modelMatrix, 0, -0.5f, -ratio / 2, -0.5f)
+                Matrix.rotateM(modelMatrix, 0, -90f, 1f, 0f, 0f)
                 drawAndReset()
 
                 //Bottom right
-                Matrix.translateM(modelMatrix, 0, -0.5f, -ratio / 2, -0.5f)
+                Matrix.translateM(modelMatrix, 0, 0.5f, -ratio / 2, -0.5f)
+                Matrix.rotateM(modelMatrix, 0, 90f, 1f, 0f, 0f)
                 drawAndReset()
+
             } else {
                 Matrix.scaleM(modelMatrix, 0, 2f, 2f, 1f)
                 drawAndReset()
             }
         }
 
-        fun drawAndReset(){
+        fun drawAndReset() {
             Matrix.setIdentityM(mvpMatrix, 0)
 
             Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
