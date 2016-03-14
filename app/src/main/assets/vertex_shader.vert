@@ -34,7 +34,7 @@ const float RAD_PROJECTED = RAD * PI; //Half circuference
 vec2 rotate_vec2(float rad, vec2 origin, vec2 point){
 //    p'x = cos(theta) * (px-ox) - sin(theta) * (py-oy) + ox
 //    p'y = sin(theta) * (px-ox) + cos(theta) * (py-oy) + oy
-    vec2 vp = vec2(0.0f, 0.0f);
+    vec2 vp = vec2(0.0, 0.0);
     float c = cos(rad);
     float s = sin(rad);
     vp.x = c * (point.x-origin.x) - s * (point.y - origin.y) + origin.x;
@@ -94,7 +94,7 @@ void main() {
     float w = bounds[0] - bounds[2];
     float h = bounds[1] - bounds[3];
 
-    gl_PointSize = 10.0f;
+    gl_PointSize = 10.0;
 
     fragWhite = 1.0;
     fragColor = color;
@@ -131,7 +131,7 @@ void main() {
 
             if(distanceToBackFaceProportion >= 0.495) {
                 float c = BACK_GRAY * (distanceToBackFaceProportion - 0.5) * 2.0;
-                fragColor = vec4(c, c, c, 1f);
+                fragColor = vec4(c, c, c, 1.0);
                 fragWhite = BACK_ALPHA;
             }
             if(DEBUG) fragColor = vec4(1.0, 1.0, 0.0, 1.0);
@@ -150,25 +150,25 @@ void main() {
             //Map the rest of the points (outside the curl) to a flat surface
 
             vec2 n = normalize(perp_vector);
-            gl_PointSize = 5.0f;
+            gl_PointSize = 5.0;
             v.xy = rotate_vec2(PI, v.xy - n* (distanceToRect - 0.5 * RAD_PROJECTED), v.xy);
             v.z = 2.0 * RAD;
 
             fragWhite = BACK_ALPHA;
-            fragColor = vec4(BACK_GRAY, BACK_GRAY, BACK_GRAY, 1f);
+            fragColor = vec4(BACK_GRAY, BACK_GRAY, BACK_GRAY, 1.0);
             if(DEBUG) fragColor = vec4(1.0, 0.0, 1.0, 1.0);
         }
 
         if(DEBUG) {
             float d = distance(finger_tip, v.xy);
-            if(d < 0.01f) {
+            if(d < 0.01) {
                 fragColor = vec4(1.0, 0.0, 0.0, 1.0);
             }
         }
     }
 
     if(position.x > 0.5){
-        float d = position.x - 0.5f;
+        float d = position.x - 0.5;
         fragColor = vec4(0.0, 0.0, 0.0, d);
         fragWhite = 1.0;
     }

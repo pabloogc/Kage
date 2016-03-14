@@ -160,38 +160,37 @@ class Page(context: Context, val width: Float, val height: Float) {
 
         program.enable()
 
+        //Map ranges to model dimensions
         var xt = 0.5f * x * width;
-        val xtc = xt;
         var yt = 0.5f * y * height;
 
         val right = 0.5f;
         val turn_point = 0.1f
 
-        if (xt < 0.0) {
+        if (xt < 0.0) { //Middle to left
             xt /= 2f;
-        } else if (right - xt < turn_point) {
+        } else if (right - xt < turn_point) { //Right edge, page rising
             val p = (right - xt) / turn_point;
-            xt = right - Math.sin(p * Math.PI * 0.5).toFloat() * turn_point * 3f ;
-        } else {
+            xt = right - p * turn_point * 3f ;
+        } else { //curve starts
             val p = 0.5f * xt / (2 * turn_point)
             xt = 2f * turn_point * p;
         }
 
-        //Log.d("Kage", "xtc:$xtc xt:$xt diff:$diff")
-
-        //Derivative of the function
+        //Derivative of the function to figure out the inclination
         val sigNum = (if (yt > 0) -1 else 1)
         val deltaY = sigNum * 0.25f;
         var dx = sigNum * (foldLineFunction(yt - deltaY) - foldLineFunction(yt + deltaY));
         var dy = sigNum * (yt - 0.5f * deltaY)
 
+        //Normalize
         val mod = Math.sqrt(dx.toDouble() * dx + dy * dy);
         dx /= mod.toFloat();
         dy /= mod.toFloat();
 
+        //Intersection between the edge of the page and the cilinder
         apex[0] = -width / 2;
         apex[1] = (dy / dx) * (apex[0] - xt) + yt;
-
 
         glUniform2fv(fingerTipUniform, 1, floatArrayOf(xt, yt), 0).glCheck()
         glUniform2fv(apexUniform, 1, apex, 0).glCheck()
@@ -208,7 +207,6 @@ class Page(context: Context, val width: Float, val height: Float) {
         glActiveTexture(GL_TEXTURE0).glCheck()
         glBindTexture(GL_TEXTURE_2D, textures[0]).glCheck()
         glUniform1i(textureUniform, 0).glCheck()
-
 
         glEnableVertexAttribArray(positionAttr).glCheck()
         glBindBuffer(GL_ARRAY_BUFFER, buffers[1]).glCheck()
@@ -228,7 +226,7 @@ class Page(context: Context, val width: Float, val height: Float) {
                 2, GL_FLOAT, false,
                 2 * 4, 0).glCheck()
 
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[0])
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[0]).glCheck()
 
         glDrawElements(MODE,
                 vertexDrawOrder.size,

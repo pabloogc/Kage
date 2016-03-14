@@ -1,5 +1,9 @@
 package com.bq.kage
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ObjectAnimator
+import android.animation.PropertyValuesHolder
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
@@ -11,6 +15,8 @@ import android.opengl.Matrix
 import android.util.AttributeSet
 import android.util.Log
 import android.view.MotionEvent
+import android.view.animation.Animation
+import android.view.animation.DecelerateInterpolator
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
@@ -19,31 +25,78 @@ const val USE_3D: Boolean = false;
 class KageView(context: Context?, attrs: AttributeSet?)
 : GLSurfaceView(context, attrs) {
 
+    var animator : ObjectAnimator? = null
+    var animating = false
     var ratio = 0f;
 
-    val c: Context
-    var touchX = 0f
+    val ctx: Context
+
+    var touchX = 1f
+        set(value) {
+            field = value
+            requestRender()
+        }
+
     var touchY = 0f
+        set(value) {
+            field = value
+            requestRender()
+        }
 
     init {
-        c = context!!
+        ctx = context!!
     }
 
     public fun init() {
         setEGLContextClientVersion(2);
         setEGLConfigChooser(MultisampleConfigChooser())
-        setRenderer(r)
+        setRenderer(kageRenderer)
         renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        touchX = (event.x / width / 0.5f) - 1;
-        touchY = -(event.y / height / 0.5f) + 1;
+        //map to -1, 1
+        if (animating) {
+            return true
+        };
+
+        val x = (event.x / width / 0.5f) - 1;
+        val y = -(event.y / height / 0.5f) + 1;
+
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                animating = true
+                val xProp = PropertyValuesHolder.ofFloat("touchX", x)
+                val yProp = PropertyValuesHolder.ofFloat("touchY", y)
+
+                animator = ObjectAnimator.ofPropertyValuesHolder(this, xProp, yProp).apply {
+                    duration = 400
+//                    interpolator = DecelerateInterpolator()
+                    addListener(object : AnimatorListenerAdapter() {
+                        override fun onAnimationEnd(anim: Animator) {
+                            animating = false
+                        }
+                    })
+                    start()
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_MOVE -> {
+                touchX = x
+                touchY = y
+            }
+        }
+
+        if (event.action == MotionEvent.ACTION_DOWN) {
+
+        } else {
+
+        }
+
         requestRender()
         return true
     }
 
-    private val r = object : GLSurfaceView.Renderer {
+    private val kageRenderer = object : GLSurfaceView.Renderer {
         private val modelMatrix = FloatArray(16)
         private val viewMatrix = FloatArray(16)
         private val projectionMatrix = FloatArray(16)
@@ -58,7 +111,7 @@ class KageView(context: Context?, attrs: AttributeSet?)
             Matrix.setIdentityM(mvpMatrix, 0)
 
             glEnable (GL_BLEND);
-            glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
             glEnable(GL_DEPTH_TEST);
             glDepthFunc(GL_LEQUAL);
@@ -99,7 +152,7 @@ class KageView(context: Context?, attrs: AttributeSet?)
 
             Matrix.setLookAtM(viewMatrix, 0, eyeX, eyeY, eyeZ, lookX, lookY, lookZ, upX, upY, upZ)
 
-            page = Page(c, 1f, 1f * ratio)
+            page = Page(ctx, 1f, 1f * ratio)
         }
 
         override fun onDrawFrame(unused: GL10) {
