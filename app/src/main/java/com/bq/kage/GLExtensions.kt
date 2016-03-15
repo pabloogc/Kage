@@ -6,10 +6,7 @@ import android.opengl.GLU
 import android.support.annotation.IntDef
 import android.util.Log
 import java.io.ByteArrayOutputStream
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.nio.FloatBuffer
-import java.nio.IntBuffer
+import java.nio.*
 import java.util.*
 
 @IntDef(GL_VERTEX_SHADER.toLong(), GL_FRAGMENT_SHADER.toLong())
@@ -168,6 +165,15 @@ fun IntArray.toBuffer(): IntBuffer {
     return out
 }
 
+fun ShortArray.toBuffer(): ShortBuffer {
+    val out = ByteBuffer
+            .allocateDirect(this.size * 2)
+            .order(ByteOrder.nativeOrder())
+            .asShortBuffer()
+    out.put(this)
+    out.position(0)
+    return out
+}
 
 //Error checking
 

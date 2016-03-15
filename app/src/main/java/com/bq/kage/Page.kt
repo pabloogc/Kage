@@ -8,6 +8,7 @@ import android.support.annotation.FloatRange
 import android.util.Log
 import java.nio.FloatBuffer
 import java.nio.IntBuffer
+import java.nio.ShortBuffer
 
 const val TAG = "Kage"
 const val RAD = 0.15f
@@ -44,8 +45,8 @@ class Page(context: Context, val width: Float, val height: Float) {
     private val vertexColor: FloatArray
     private val vertexColorBuffer: FloatBuffer
 
-    private val vertexDrawOrder: IntArray
-    private val vertexDrawOrderBuffer: IntBuffer
+    private val vertexDrawOrder: ShortArray
+    private val vertexDrawOrderBuffer: ShortBuffer
 
     private val apex = floatArrayOf(0.25f, -0.25f)
 
@@ -87,7 +88,7 @@ class Page(context: Context, val width: Float, val height: Float) {
 
         //draw order
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[0]).glCheck()
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, vertexDrawOrder.size * 4, vertexDrawOrderBuffer, GL_STATIC_DRAW).glCheck()
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, vertexDrawOrder.size * 2, vertexDrawOrderBuffer, GL_STATIC_DRAW).glCheck()
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
 
         //positions
@@ -227,10 +228,9 @@ class Page(context: Context, val width: Float, val height: Float) {
                 2 * 4, 0).glCheck()
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[0]).glCheck()
-
         glDrawElements(MODE,
                 vertexDrawOrder.size,
-                GL_UNSIGNED_INT,
+                GL_UNSIGNED_SHORT,
                 0).glCheck();
 
 
@@ -283,9 +283,9 @@ class Page(context: Context, val width: Float, val height: Float) {
         return colors
     }
 
-    private fun calculateVertexDrawOrder(): IntArray {
+    private fun calculateVertexDrawOrder(): ShortArray {
         val squares = (gridRows - 1) * (gridColumns - 1)
-        val o = kotlin.IntArray(squares * 6) //3 per triangle in the square
+        val o = kotlin.ShortArray(squares * 6) //3 per triangle in the square
 
         for (i in gridRows - 2 downTo 0) {
             for (j in gridColumns - 2 downTo 0) {
@@ -297,12 +297,12 @@ class Page(context: Context, val width: Float, val height: Float) {
                 val v3 = v2 + 1
 
                 val idx = (i * (gridColumns - 1) + j) * 6
-                o[idx + 0] = v0 //Bottom triangle
-                o[idx + 1] = v2
-                o[idx + 2] = v3
-                o[idx + 3] = v0 //Top triangle
-                o[idx + 4] = v3
-                o[idx + 5] = v1
+                o[idx + 0] = v0.toShort() //Bottom triangle
+                o[idx + 1] = v2.toShort()
+                o[idx + 2] = v3.toShort()
+                o[idx + 3] = v0.toShort() //Top triangle
+                o[idx + 4] = v3.toShort()
+                o[idx + 5] = v1.toShort()
             }
         }
         return o;
